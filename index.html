@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mythic World — Where Legends Walk</title>
+  <meta name="description" content="A 3D mythological adventure grounded in real history. Explore the Greek Underworld, Yggdrasil, the Egyptian Duat, and more. Leave your legend forever." />
+  <meta property="og:title" content="Mythic World" />
+  <meta property="og:description" content="Walk through ancient myth. Your deeds echo forever." />
+  <meta property="og:type" content="website" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- Name / Realm Selection Screen -->
+  <div id="name-screen">
+    <div class="title-eyebrow">✦ An Eternal Chronicle ✦</div>
+    <h1 class="game-title">MYTHIC WORLD</h1>
+    <p class="game-subtitle">Where the old gods still walk, and seekers leave their mark forever</p>
+    <div class="name-label">Your name, Seeker</div>
+    <input id="player-name-input" type="text" placeholder="Enter your name…" maxlength="24" autocomplete="off" />
+    <div class="realm-prompt">Choose your realm</div>
+    <div class="realm-selector" id="realm-selector">
+      <button class="realm-btn selected" data-realm="greek">Greek Underworld</button>
+      <button class="realm-btn" data-realm="norse">Yggdrasil</button>
+      <button class="realm-btn" data-realm="egypt">The Duat</button>
+      <button class="realm-btn" data-realm="celtic">Tir na nÓg</button>
+      <button class="realm-btn" data-realm="sumerian">Cedar Forest</button>
+    </div>
+    <button id="enter-world-btn">Enter the Realm ✦</button>
+    <div class="controls-preview">WASD · Move &nbsp;|&nbsp; Mouse · Look &nbsp;|&nbsp; E · Interact &nbsp;|&nbsp; L · Legends &nbsp;|&nbsp; P · Leave your mark</div>
+  </div>
+
+  <!-- Game UI overlay -->
+  <div id="ui">
+    <div id="crosshair"></div>
+    <div id="hud-top">
+      <div id="realm-name">The Liminal Realm</div>
+      <div id="legend-count"></div>
+    </div>
+    <div id="interact-hint">[ E ] Approach</div>
+    <div id="lore-box">
+      <div id="lore-title">Ancient Lore</div>
+      <div id="lore-text"></div>
+    </div>
+    <div id="controls-hint">WASD · Move<br>Mouse · Look<br>E · Interact<br>L · Legends<br>P · Leave mark</div>
+    <div id="dialogue-box">
+      <div id="npc-name"></div>
+      <div id="dialogue-text"></div>
+      <div id="dialogue-choices"></div>
+    </div>
+    <div id="legacy-panel">
+      <h2>✦ Legends Written Into This World ✦</h2>
+      <div id="legacy-list"></div>
+      <button id="legacy-close">Return to the World</button>
+    </div>
+  </div>
+
+  <div id="click-to-play">
+    Click to explore the world<br>
+    <span>WASD to move · Mouse to look · E to interact</span>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/lore.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/dialogue.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
