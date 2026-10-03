@@ -1,7 +1,7 @@
 /* MELT — offline cache. Bump VERSION whenever shipped files change. */
-const VERSION = 'melt-v1';
+const VERSION = 'melt-v2';
 const ASSETS = [
-  './', './index.html', './css/style.css', './manifest.webmanifest',
+  './', './index.html', './css/style.css', './manifest.webmanifest', './switcher.js',
   './src/main.js', './src/core/config.js', './src/core/melt.js', './src/core/palette.js',
   './src/render/renderer.js', './src/render/effects.js', './src/audio/sfx.js',
   './src/platform/storage.js', './src/platform/haptics.js', './src/platform/input.js',

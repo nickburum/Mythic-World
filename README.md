@@ -53,6 +53,7 @@ tools/make-icon.mjs             regenerates the icon
 tools/render-art.mjs            rasterises icons, captures screenshots, smoke-tests in headless Chromium
 tests/melt.test.js              rules, spacing fairness, 20-seed survival
 docs/                           design document, porting guide
+switcher.js                     right-edge drawer shared by both games: tap the handle or swipe from the edge to switch
 sky-temple/                     the previous prototype (a Stack-style tower game), still playable at /sky-temple/
 ```
 

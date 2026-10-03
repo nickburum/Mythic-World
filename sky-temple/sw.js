@@ -1,10 +1,12 @@
 /* Sky Temple — offline cache. Bump VERSION whenever shipped files change. */
-const VERSION = 'skytemple-v1';
+const VERSION = 'skytemple-v2';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
   './manifest.webmanifest',
+  '../switcher.js',
+  '../art/icon-192.png',
   './src/main.js',
   './src/core/config.js',
   './src/core/stack.js',

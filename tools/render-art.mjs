@@ -86,6 +86,21 @@ async function renderScreens(browser) {
   const state = await page.evaluate(() => window.__melt.state);
   if (state !== 'playing') errors.push(`touch did not restart game (state=${state})`);
 
+  // Game switcher: handle opens the drawer, links resolve, the other game loads.
+  await page.click('.gsw-handle');
+  await page.waitForTimeout(400);
+  const drawerOpen = await page.evaluate(() => document.body.classList.contains('gsw-open'));
+  if (!drawerOpen) errors.push('switcher drawer did not open');
+  await page.screenshot({ path: resolve(ROOT, 'art/screens/switcher.png') });
+  console.log('art/screens/switcher.png');
+  const hrefs = await page.$$eval('.gsw-card', as => as.map(a => a.href));
+  for (const h of hrefs) { const r = await fetch(h); if (!r.ok) errors.push(`switcher link ${h} → ${r.status}`); }
+  await page.click('.gsw-card:not(.gsw-current)');
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(500);
+  const other = await page.evaluate(() => window.__gameSwitcher && window.__gameSwitcher.current);
+  if (other !== 'sky-temple') errors.push(`switching did not land on sky-temple (got ${other})`);
+
   await page.close();
   if (errors.length) { console.error('Page errors:\n' + errors.join('\n')); process.exitCode = 1; }
   else console.log('smoke test: no page errors');
