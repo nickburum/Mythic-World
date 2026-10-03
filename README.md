@@ -1,110 +1,82 @@
-# Mythic World 🏛️
+# Sky Temple ⛩
 
-A 3D mythological adventure grounded in real historical scholarship. Walk through the Greek Underworld, Norse Yggdrasil, the Egyptian Duat, Celtic Tir na nÓg, and the Sumerian Cedar Forest. Speak with figures from ancient texts. Leave your legend permanently carved into the world for all future players to find.
+**A one-tap hyper-casual tower stacker.** Stones slide across the screen; tap to drop them. Land one perfectly and it glows. Chain perfects and your shrinking stone grows back. Miss the edge and your temple falls.
 
-**[▶ Play Now](https://YOUR-USERNAME.github.io/mythic-world)**
+Built entirely in this repo with zero dependencies and zero binary assets: every sprite, sky, cloud and sound is generated in code. The gameplay core is a DOM-free module designed to be ported to Unity (C#) or Xcode (Swift) — see [`docs/PORTING.md`](docs/PORTING.md).
 
----
+<p align="center">
+  <img src="art/screens/title.png" width="180" alt="Title screen">
+  <img src="art/screens/gameplay.png" width="180" alt="Gameplay">
+  <img src="art/screens/perfect.png" width="180" alt="Perfect drop">
+  <img src="art/screens/gameover.png" width="180" alt="Game over">
+</p>
 
-## Features
-
-- **Real 3D world** built with Three.js — walk freely, look around
-- **Curated NPC dialogue** drawn from real historical sources: the Odyssey, Prose Edda, Book of the Dead, Epic of Gilgamesh, Fenian Cycle. No AI used for NPC speech — the content is authored and safe
-- **Five distinct realms**, each with unique architecture and atmosphere
-- **Permanent player legacies** — press P to write your deed into the world. A glowing stone appears that future players can find and read
-- **Ancient lore stones** — pre-written inscriptions from real mythological scholarship
-
-## Controls
-
-| Key | Action |
-|-----|--------|
-| `WASD` | Move |
-| `Mouse` | Look around (click to lock) |
-| `E` | Interact with nearby NPC or stone |
-| `L` | Open the Legends panel (all player deeds) |
-| `P` | Write your own legend into the world |
-| `Esc` | Exit dialogue / close panels |
-
-## Historical Sources
-
-All NPC dialogue and lore inscriptions are drawn from:
-
-- **Greek**: Homer's *Odyssey* & *Iliad*, Virgil's *Aeneid*, Sophocles' *Antigone*, Ovid's *Metamorphoses*
-- **Norse**: *Prose Edda* (Snorri Sturluson), *Poetic Edda*, *Hávamál*
-- **Egyptian**: *Book of the Dead*, Pyramid Texts (~2400 BCE), Heliopolitan creation myth
-- **Celtic**: *Fenian Cycle*, *Lebor na hUidre*, *Mabinogion*
-- **Sumerian**: *Epic of Gilgamesh* (~2100 BCE), Inanna's Descent to the Underworld
-
-## Setup
-
-### Quick start (GitHub Pages)
-
-1. **Fork or clone** this repository
-2. Go to **Settings → Pages**
-3. Under *Source*, select **GitHub Actions**
-4. Push to `main` — the site deploys automatically via `.github/workflows/deploy.yml`
-5. Your game will be live at `https://YOUR-USERNAME.github.io/mythic-world`
-
-### Local development
-
-No build step needed — it's pure HTML, CSS, and JavaScript.
+## Play
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/mythic-world.git
-cd mythic-world
-# Open with any local server, e.g.:
-npx serve .
-# or
-python3 -m http.server 8080
+npm start          # serves on http://localhost:8080 (any static server works)
 ```
 
-Then visit `http://localhost:8080`.
+Open it on a phone on the same network or add it to your home screen: it is a fullscreen, offline-capable PWA.
 
-> **Note:** Open directly as a file (`file://`) won't work because browsers block ES modules and font loading from `file://`. Use a local server.
+| Input | Action |
+|------|--------|
+| Tap / click / Space | Drop the sliding stone |
+| 🔊 button | Mute (remembered) |
 
-## Project Structure
+## The loop
+
+1. A stone slides back and forth above the tower, alternating X and Z axes each turn.
+2. **Tap** to drop. Whatever overhangs the stone below is sheared off and tumbles away. The next stone inherits the smaller footprint.
+3. **Perfect** (within tolerance) snaps the stone into place with a ring, a rising note and a combo counter. After 3 perfects in a row the stone regrows a little each time, up to full size.
+4. Speed ramps with score. Zones are announced at 10, 25, 50, 75, 100, 150 and 200 stones as the sky shifts from dawn through dusk, night and deep space.
+5. Miss the tower entirely → the camera pulls back to show your temple, score vs best, and an instant retry.
+
+Full design notes, retention hooks and monetisation plan: [`docs/DESIGN.md`](docs/DESIGN.md).
+
+## Project layout
 
 ```
-mythic-world/
-├── index.html              # Entry point
-├── css/
-│   └── style.css           # All styles
-├── js/
-│   ├── lore.js             # Mythological content, NPC dialogue trees, realm data
-│   ├── storage.js          # Player legacy persistence (localStorage)
-│   ├── world.js            # Three.js scene builder
-│   ├── dialogue.js         # Dialogue system
-│   └── main.js             # Game loop, input, legacy prompt
-└── .github/
-    └── workflows/
-        └── deploy.yml      # Auto-deploy to GitHub Pages
+index.html                 shell + overlays (title, HUD, game over)
+css/style.css              UI chrome
+src/
+  core/
+    config.js              every tuning number (one place to balance the game)
+    stack.js               THE GAME — pure simulation, no DOM. Port this first.
+    palette.js             procedural colours: stone shades, sky bands
+  render/
+    renderer.js            2:1 isometric canvas renderer, clouds, stars, plinth
+    effects.js             falling slices, perfect rings, sparks, text pops, shake
+  audio/sfx.js             WebAudio synth: place / perfect melody / miss / milestone
+  platform/
+    input.js               one verb: tap (pointer + keyboard)
+    storage.js             best score, mute, games played (localStorage)
+    haptics.js             Vibration API; maps to UIImpactFeedbackGenerator on iOS
+  main.js                  state machine, camera, render loop, UI glue
+art/
+  icon.svg                 app icon, generated from the game's own projection
+  icon-{180,192,512,1024}.png
+  screens/*.png            store screenshots, captured from the real game
+tools/
+  make-icon.mjs            regenerates art/icon.svg
+  render-art.mjs           rasterises icons + screenshots in headless Chromium; doubles as a smoke test
+tests/stack.test.js        core rules: cut geometry, perfect snap, regrow, miss, milestones
+docs/DESIGN.md             game design document
+docs/PORTING.md            Unity / Xcode porting guide
+manifest.webmanifest, sw.js   installable, offline PWA
 ```
 
-## Adding Content
+## Develop
 
-### New NPC
-Add to the `npcs` array in `js/lore.js` inside any realm. Each NPC needs:
-- `name` — display name
-- `color` — Three.js hex color for the character mesh
-- `lore` — shown in the lore panel when nearby (historical context)
-- `pos` — `{ angle, dist }` position in the realm
-- `dialogueTree` — branching dialogue (see existing examples)
+```bash
+npm test             # core logic tests (node:test, no deps)
+npm run icons        # regenerate PNG icons from art/icon.svg
+npm run screens      # icons + screenshots + headless smoke test (needs playwright + chromium)
+node tools/make-icon.mjs   # rebuild the SVG icon
+```
 
-### New Realm
-Add a new key to the `REALMS` object in `js/lore.js`, then add a button in `index.html` and a `buildRealmEnvironment` case in `js/world.js`.
-
-### New Memory Stone
-Add to the `memorystones` array in any realm with `{ x, z, lore }`.
-
-## Design Philosophy
-
-**No AI for NPC dialogue.** Every word spoken by every character is hand-authored from real historical and mythological scholarship. This ensures:
-- Players cannot manipulate NPCs into saying inappropriate things
-- The content is accurate and educationally grounded
-- The experience is consistent and purposeful
-
-**AI is not used in this project at all.** The legacy system uses `localStorage` — entirely client-side.
+Balance the game by editing `src/core/config.js` only. The deploy workflow runs the tests on every push and publishes `main` to GitHub Pages.
 
 ## License
 
-MIT — use, fork, expand freely.
+MIT
