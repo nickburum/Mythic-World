@@ -1,282 +1,388 @@
 /**
- * Sky Temple — isometric canvas renderer.
- *
- * All art is procedural: sky gradients, clouds, stars and shaded stones are
- * drawn with 2D canvas primitives. Nothing here touches game rules; it only
- * reads the StackGame state and a Camera.
- *
- * Projection (2:1 isometric):
- *   screenX = centreX + (x - z) * K
- *   screenY = anchorY + (x + z) * K / 2 - (y - focusY) * K
- * where K is the camera scale in pixels per world unit.
+ * MELT — canvas renderer. Side view on a fixed 390 × 700 world, scaled to
+ * fit the screen; the backdrop and rock strips extend to the screen edges.
+ * All art is procedural shapes. No game rules live here.
  */
-import { stoneColors, skyColors, hsl, lerp } from '../core/palette.js';
+import { CONFIG } from '../core/config.js';
+import { OBSTACLES, PHASE } from '../core/melt.js';
+import { PHASE_COLORS, OBSTACLE_COLORS, ROCK, skyForTemp, lerp } from '../core/palette.js';
 
-/** @typedef {{ focusY:number, anchor:number, K:number, shakeX:number, shakeY:number }} Camera */
+const TAU = Math.PI * 2;
 
-const MARBLE = { top: 'hsl(40 20% 92%)', right: 'hsl(40 18% 78%)', left: 'hsl(40 16% 66%)', edge: 'hsl(45 90% 70% / 0.9)' };
-const PLINTH_DEPTH = 40; // how far the base column extends below the first stone (world units)
-
-/** Small deterministic PRNG so clouds and stars are identical every run. */
 function mulberry32(seed) {
   let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6D2B79F5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
 export class Renderer {
-  /** @param {HTMLCanvasElement} canvas */
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.w = 0;
-    this.h = 0;
-    this.dpr = 1;
-    this.clouds = this.makeClouds();
-    this.stars = this.makeStars();
+    this.w = 0; this.h = 0; this.dpr = 1;
+    this.scale = 1; this.ox = 0; this.oy = 0;
+    this.motes = this.makeMotes();
     this.resize();
   }
 
   resize() {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.w = window.innerWidth;
-    this.h = window.innerHeight;
+    this.w = window.innerWidth; this.h = window.innerHeight;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
     this.canvas.style.width = `${this.w}px`;
     this.canvas.style.height = `${this.h}px`;
-    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.scale = Math.min(this.w / CONFIG.WORLD_W, this.h / CONFIG.WORLD_H);
+    this.ox = 0;                                            // world x = 0 at the left screen edge
+    this.oy = (this.h - CONFIG.WORLD_H * this.scale) / 2;   // vertically centred
   }
 
-  /** Camera scale that makes a stone read well on any aspect ratio. */
-  baseScale() {
-    return Math.min(this.w * 0.27, this.h * 0.17);
+  /** Visible world width (world px). */
+  viewWorldW() { return this.w / this.scale; }
+  /** World y of the top / bottom screen edges. */
+  worldTop() { return -this.oy / this.scale; }
+  worldBottom() { return (this.h - this.oy) / this.scale; }
+
+  /** Screen position of a world point (for HUD-space effects). */
+  toScreen(x, y) { return [this.ox + x * this.scale, this.oy + y * this.scale]; }
+
+  /** Enter world space (call once per frame around world drawing). */
+  begin(shakeX = 0, shakeY = 0) {
+    const { ctx } = this;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.translate(this.ox + shakeX, this.oy + shakeY);
+    ctx.scale(this.scale, this.scale);
+  }
+  end() { this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); }
+
+  /* ───────────── backdrop ───────────── */
+
+  makeMotes() {
+    const rnd = mulberry32(5);
+    const m = [];
+    for (let i = 0; i < 60; i++) m.push({ x: rnd(), y: rnd(), r: 1 + rnd() * 3, depth: 0.15 + rnd() * 0.6, ph: rnd() * TAU });
+    return m;
   }
 
-  /** World → screen. @returns {[number, number]} */
-  project(x, y, z, cam) {
-    const px = this.w / 2 + (x - z) * cam.K + cam.shakeX;
-    const py = this.h * cam.anchor + (x + z) * cam.K * 0.5 - (y - cam.focusY) * cam.K + cam.shakeY;
-    return [px, py];
-  }
-
-  /* ───────────── background ───────────── */
-
-  makeClouds() {
-    const rnd = mulberry32(7);
-    const clouds = [];
-    for (let i = 0; i < 160; i++) {
-      clouds.push({
-        y: -3 + i * 0.75 + rnd() * 0.5,          // world height
-        off: (rnd() - 0.5) * 5.2,                 // horizontal offset in K units
-        scale: 0.35 + rnd() * 0.55,
-        speed: (0.04 + rnd() * 0.08) * (rnd() < 0.5 ? 1 : -1),
-        puffs: 3 + Math.floor(rnd() * 3),
-        seed: rnd() * 1000,
-      });
-    }
-    return clouds;
-  }
-
-  makeStars() {
-    const rnd = mulberry32(99);
-    const stars = [];
-    for (let i = 0; i < 140; i++) {
-      stars.push({ x: rnd(), y: rnd(), r: 0.6 + rnd() * 1.4, tw: rnd() * Math.PI * 2, par: 0.05 + rnd() * 0.12 });
-    }
-    return stars;
-  }
-
-  drawSky(heightStones) {
+  drawSky(temp) {
     const { ctx, w, h } = this;
-    const sky = skyColors(heightStones);
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const sky = skyForTemp(temp);
     const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, sky.top);
-    g.addColorStop(1, sky.bottom);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-    return sky;
+    g.addColorStop(0, sky.top); g.addColorStop(1, sky.bottom);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    // soft glow behind the play lane
+    const rg = ctx.createRadialGradient(w * 0.35, h * 0.5, 10, w * 0.35, h * 0.5, Math.max(w, h) * 0.6);
+    rg.addColorStop(0, sky.glow); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, w, h);
   }
 
-  drawStars(night, cam, time) {
-    if (night <= 0.01) return;
+  drawMotes(distance, time, temp) {
     const { ctx, w, h } = this;
-    ctx.save();
-    for (const s of this.stars) {
-      const y = (((s.y * h + cam.focusY * cam.K * s.par) % h) + h) % h;
-      const x = s.x * w;
-      const tw = 0.55 + 0.45 * Math.sin(time * 2 + s.tw);
-      ctx.globalAlpha = night * tw;
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(x, y, s.r, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const hot = temp / 100;
+    for (const m of this.motes) {
+      const x = ((m.x * w - distance * m.depth * this.scale) % w + w) % w;
+      // motes rise when hot, sink when cold
+      const y = (((m.y * h + Math.sin(time * 0.8 + m.ph) * 6 + (0.5 - hot) * time * 18 * m.depth) % h) + h) % h;
+      ctx.globalAlpha = 0.08 + m.depth * 0.18;
+      ctx.fillStyle = hot > 0.6 ? '#ffd9a0' : '#cfefff';
+      ctx.beginPath(); ctx.arc(x, y, m.r * (0.6 + m.depth), 0, TAU); ctx.fill();
     }
-    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
-  drawClouds(cam, time, night) {
-    const { ctx, w, h } = this;
-    const alpha = 1 - night;
-    if (alpha <= 0.02) return;
-    ctx.save();
-    for (const c of this.clouds) {
-      const [, py] = this.project(0, c.y, 0, cam);
-      if (py < -80 || py > h + 80) continue;
-      const drift = ((time * c.speed * cam.K + c.seed * 37) % (w + 300)) - 150;
-      const px = ((w / 2 + c.off * cam.K + drift) % (w + 300) + (w + 300)) % (w + 300) - 150;
-      const r = cam.K * 0.42 * c.scale;
-      ctx.globalAlpha = alpha * 0.88;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      for (let p = 0; p < c.puffs; p++) {
-        const a = c.seed + p * 1.7;
-        const ox = (p - (c.puffs - 1) / 2) * r * 0.9;
-        const oy = Math.sin(a) * r * 0.25;
-        const rr = r * (0.7 + 0.3 * Math.abs(Math.cos(a)));
-        ctx.moveTo(px + ox + rr, py + oy);
-        ctx.arc(px + ox, py + oy, rr, 0, Math.PI * 2);
+  /** Rock strips (ceiling + floor) with scrolling seams. Call inside begin(). */
+  drawRock(distance) {
+    const { ctx } = this;
+    const left = -20, right = this.viewWorldW() + 20;
+    const top = this.worldTop() - 20, bottom = this.worldBottom() + 20;
+    ctx.fillStyle = ROCK.fill;
+    ctx.fillRect(left, top, right - left, CONFIG.CEILING_Y - top);
+    ctx.fillRect(left, CONFIG.FLOOR_Y, right - left, bottom - CONFIG.FLOOR_Y);
+    // edge highlights
+    ctx.fillStyle = ROCK.edge;
+    ctx.fillRect(left, CONFIG.CEILING_Y - 6, right - left, 6);
+    ctx.fillRect(left, CONFIG.FLOOR_Y, right - left, 6);
+    // scrolling tile seams
+    const tile = 64;
+    const off = -(distance % tile);
+    ctx.strokeStyle = ROCK.seam; ctx.lineWidth = 2;
+    for (let x = left + off; x < right; x += tile) {
+      ctx.beginPath(); ctx.moveTo(x, CONFIG.FLOOR_Y + 6); ctx.lineTo(x, CONFIG.FLOOR_Y + 40); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + tile / 2, CONFIG.CEILING_Y - 6); ctx.lineTo(x + tile / 2, CONFIG.CEILING_Y - 36); ctx.stroke();
+    }
+    // stalactite bumps
+    ctx.fillStyle = ROCK.fill;
+    for (let x = left + off; x < right; x += tile) {
+      ctx.beginPath(); ctx.moveTo(x + 10, CONFIG.CEILING_Y); ctx.lineTo(x + 22, CONFIG.CEILING_Y + 14); ctx.lineTo(x + 34, CONFIG.CEILING_Y); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  /* ───────────── obstacles ───────────── */
+
+  drawObstacle(o, time) {
+    const { ctx } = this;
+    const c = OBSTACLE_COLORS[o.type];
+    const top = CONFIG.CEILING_Y, floor = CONFIG.FLOOR_Y;
+    switch (o.type) {
+      case 'spikes': {
+        const n = 3, bw = o.w / n, hgt = 64;
+        for (let i = 0; i < n; i++) {
+          const x0 = o.x + i * bw;
+          ctx.fillStyle = c.dark;
+          ctx.beginPath(); ctx.moveTo(x0, floor); ctx.lineTo(x0 + bw / 2, floor - hgt); ctx.lineTo(x0 + bw, floor); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = c.fill;
+          ctx.beginPath(); ctx.moveTo(x0 + 3, floor); ctx.lineTo(x0 + bw / 2, floor - hgt + 6); ctx.lineTo(x0 + bw / 2 + 2, floor); ctx.closePath(); ctx.fill();
+        }
+        break;
       }
-      // flat underside
-      const half = r * c.puffs * 0.45;
-      ctx.moveTo(px - half, py);
-      ctx.rect(px - half, py, half * 2, r * 0.45);
-      ctx.fill();
+      case 'beam': {
+        const hgt = 150;
+        ctx.fillStyle = c.dark; ctx.fillRect(o.x, top - 2, o.w, hgt + 2);
+        ctx.fillStyle = c.fill; ctx.fillRect(o.x + 4, top - 2, o.w - 12, hgt - 6);
+        ctx.fillStyle = c.dark;
+        for (let y = top + 18; y < top + hgt - 10; y += 30) { ctx.beginPath(); ctx.arc(o.x + o.w / 2, y, 3.5, 0, TAU); ctx.fill(); }
+        // warning stripe at the bottom
+        ctx.fillStyle = '#ffd36b'; ctx.fillRect(o.x, top + hgt - 8, o.w, 8);
+        ctx.fillStyle = '#222';
+        for (let x = o.x; x < o.x + o.w; x += 12) ctx.fillRect(x, top + hgt - 8, 6, 8);
+        break;
+      }
+      case 'glass': {
+        ctx.fillStyle = c.frame; ctx.fillRect(o.x, top, o.w, 10); ctx.fillRect(o.x, floor - 10, o.w, 10);
+        ctx.fillStyle = c.fill; ctx.fillRect(o.x + 6, top + 10, o.w - 12, floor - top - 20);
+        ctx.strokeStyle = c.edge; ctx.lineWidth = 2;
+        ctx.strokeRect(o.x + 6, top + 10, o.w - 12, floor - top - 20);
+        // glints
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath(); ctx.moveTo(o.x + 12, top + 40); ctx.lineTo(o.x + 12, top + 120); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(o.x + 18, top + 140); ctx.lineTo(o.x + 18, top + 170); ctx.stroke();
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 'pipe': {
+        ctx.fillStyle = c.fill; ctx.fillRect(o.x, top, o.w, floor - top);
+        ctx.fillStyle = c.dark; ctx.fillRect(o.x + 6, top + 8, o.w - 12, floor - top - 70);
+        // round opening at floor level
+        const cx = o.x + o.w / 2, cy = floor - 30, r = 28;
+        ctx.fillStyle = c.ring; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#0d1424'; ctx.beginPath(); ctx.arc(cx, cy, r - 7, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(58,167,255,0.35)'; ctx.beginPath(); ctx.arc(cx, cy + 6, r - 12, 0, Math.PI); ctx.fill();
+        break;
+      }
+      case 'geyser': {
+        ctx.fillStyle = '#222b44'; ctx.fillRect(o.x, floor - 6, o.w, 10);
+        ctx.fillStyle = '#0d1424';
+        for (let x = o.x + 6; x < o.x + o.w - 6; x += 10) ctx.fillRect(x, floor - 4, 5, 6);
+        // flames
+        for (let i = 0; i < 5; i++) {
+          const fx = o.x + 8 + i * (o.w - 16) / 4;
+          const fh = 50 + Math.sin(time * 14 + i * 1.7) * 14;
+          ctx.fillStyle = c.fill; ctx.globalAlpha = 0.85;
+          ctx.beginPath(); ctx.moveTo(fx - 7, floor - 4); ctx.quadraticCurveTo(fx, floor - fh * 0.6, fx, floor - fh); ctx.quadraticCurveTo(fx, floor - fh * 0.6, fx + 7, floor - 4); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = c.dark; ctx.globalAlpha = 0.9;
+          ctx.beginPath(); ctx.moveTo(fx - 3, floor - 4); ctx.quadraticCurveTo(fx, floor - fh * 0.4, fx, floor - fh * 0.55); ctx.quadraticCurveTo(fx, floor - fh * 0.4, fx + 3, floor - 4); ctx.closePath(); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 'vent': {
+        // icicles
+        for (let i = 0; i < 5; i++) {
+          const ix = o.x + 6 + i * (o.w - 12) / 4;
+          const ih = 26 + (i % 2) * 16;
+          ctx.fillStyle = c.dark;
+          ctx.beginPath(); ctx.moveTo(ix - 6, top); ctx.lineTo(ix, top + ih); ctx.lineTo(ix + 6, top); ctx.closePath(); ctx.fill();
+        }
+        // falling flakes
+        ctx.fillStyle = c.fill;
+        for (let i = 0; i < 7; i++) {
+          const fy = top + 20 + ((time * 90 + i * 61) % (CONFIG.FLOOR_Y - top - 30));
+          const fx = o.x + 6 + ((i * 37) % (o.w - 12)) + Math.sin(time * 3 + i) * 4;
+          ctx.globalAlpha = 0.8;
+          ctx.beginPath(); ctx.arc(fx, fy, 2.5, 0, TAU); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        break;
+      }
     }
-    ctx.restore();
+    if (o.hint && !o.passed) this.drawHint(o);
   }
 
-  /* ───────────── stones ───────────── */
-
-  /**
-   * Draw one axis-aligned box with isometric shading.
-   * @param {{x:number,z:number,w:number,d:number,y:number,h:number}} b
-   * @param {{top:string,right:string,left:string,edge:string}} col
-   */
-  drawBlock(b, col, cam, alpha = 1) {
+  /** Teaching label above a new obstacle type. */
+  drawHint(o) {
     const { ctx } = this;
-    const x0 = b.x - b.w / 2, x1 = b.x + b.w / 2;
-    const z0 = b.z - b.d / 2, z1 = b.z + b.d / 2;
-    const y0 = b.y, y1 = b.y + b.h;
-    const P = (x, y, z) => this.project(x, y, z, cam);
-
-    const tA = P(x0, y1, z0), tB = P(x1, y1, z0), tC = P(x1, y1, z1), tD = P(x0, y1, z1);
-    const bB = P(x1, y0, z0), bC = P(x1, y0, z1), bD = P(x0, y0, z1);
-
+    const def = OBSTACLES[o.type];
+    const col = OBSTACLE_COLORS[o.type].hint;
+    const cx = o.x + o.w / 2;
+    const y = o.type === 'beam' ? CONFIG.CEILING_Y + 190 : o.type === 'spikes' || o.type === 'geyser' ? CONFIG.FLOOR_Y - 100 : CONFIG.CEILING_Y + 60;
     ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.lineJoin = 'round';
-
-    // +X face (right)
-    ctx.fillStyle = col.right;
-    ctx.beginPath();
-    ctx.moveTo(tB[0], tB[1]); ctx.lineTo(tC[0], tC[1]); ctx.lineTo(bC[0], bC[1]); ctx.lineTo(bB[0], bB[1]);
-    ctx.closePath(); ctx.fill();
-
-    // +Z face (left)
-    ctx.fillStyle = col.left;
-    ctx.beginPath();
-    ctx.moveTo(tD[0], tD[1]); ctx.lineTo(tC[0], tC[1]); ctx.lineTo(bC[0], bC[1]); ctx.lineTo(bD[0], bD[1]);
-    ctx.closePath(); ctx.fill();
-
-    // top face
-    ctx.fillStyle = col.top;
-    ctx.beginPath();
-    ctx.moveTo(tA[0], tA[1]); ctx.lineTo(tB[0], tB[1]); ctx.lineTo(tC[0], tC[1]); ctx.lineTo(tD[0], tD[1]);
-    ctx.closePath(); ctx.fill();
-
-    // crisp lit edge along the top-front rim
-    ctx.strokeStyle = col.edge;
-    ctx.lineWidth = Math.max(1, cam.K * 0.018);
-    ctx.beginPath();
-    ctx.moveTo(tB[0], tB[1]); ctx.lineTo(tC[0], tC[1]); ctx.lineTo(tD[0], tD[1]);
-    ctx.stroke();
-
+    ctx.font = '900 13px ui-rounded, -apple-system, "SF Pro Rounded", "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(def.label).width + 18;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    this.roundRect(cx - tw / 2, y - 12, tw, 24, 12); ctx.fill();
+    ctx.fillStyle = col; ctx.fillText(def.label, cx, y + 0.5);
+    // phase icon under the label (which state gets through)
+    if (def.needs.length === 1) this.drawPhaseIcon(def.needs[0], cx, y + 24, 7);
+    else if (def.needs.length === 2) { this.drawPhaseIcon(def.needs[0], cx - 10, y + 24, 6); this.drawPhaseIcon(def.needs[1], cx + 10, y + 24, 6); }
     ctx.restore();
   }
 
-  /** Outline of a block's top face (used for perfect rings). */
-  topFacePath(b, cam, inflate = 0) {
+  drawPhaseIcon(phase, x, y, r) {
     const { ctx } = this;
-    const x0 = b.x - b.w / 2 - inflate, x1 = b.x + b.w / 2 + inflate;
-    const z0 = b.z - b.d / 2 - inflate, z1 = b.z + b.d / 2 + inflate;
-    const y1 = b.y + b.h;
-    const P = (x, z) => this.project(x, y1, z, cam);
-    const a = P(x0, z0), bb = P(x1, z0), c = P(x1, z1), d = P(x0, z1);
+    const c = PHASE_COLORS[phase];
+    ctx.fillStyle = c.fill;
+    if (phase === PHASE.ICE) { this.roundRect(x - r, y - r, r * 2, r * 2, r * 0.3); ctx.fill(); }
+    else if (phase === PHASE.WATER) { this.dropPath(x, y, r); ctx.fill(); }
+    else { ctx.beginPath(); ctx.arc(x - r * 0.5, y + r * 0.1, r * 0.7, 0, TAU); ctx.arc(x + r * 0.5, y + r * 0.1, r * 0.7, 0, TAU); ctx.arc(x, y - r * 0.3, r * 0.8, 0, TAU); ctx.fill(); }
+  }
+
+  roundRect(x, y, w, h, r) {
+    const { ctx } = this;
     ctx.beginPath();
-    ctx.moveTo(a[0], a[1]); ctx.lineTo(bb[0], bb[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]);
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+  }
+
+  dropPath(x, y, r) {
+    const { ctx } = this;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 1.45);
+    ctx.bezierCurveTo(x + r * 0.2, y - r * 0.9, x + r, y - r * 0.5, x + r, y + r * 0.15);
+    ctx.arc(x, y + r * 0.15, r, 0, Math.PI, false);
+    ctx.bezierCurveTo(x - r, y - r * 0.5, x - r * 0.2, y - r * 0.9, x, y - r * 1.45);
     ctx.closePath();
   }
 
-  /** The marble plinth: stone 0 drawn as a tall column with a gold band. */
-  drawPlinth(base, cam) {
-    const column = { ...base, y: base.y - PLINTH_DEPTH, h: base.h + PLINTH_DEPTH };
-    this.drawBlock(column, MARBLE, cam);
-    // gold band just under the top rim
+  /* ───────────── droplet ───────────── */
+
+  /** World y of the droplet centre for an altitude 0..1. */
+  playerY(altitude) {
+    return lerp(CONFIG.FLOOR_Y - CONFIG.PLAYER_R, CONFIG.CEILING_Y + CONFIG.PLAYER_R + 10, altitude);
+  }
+
+  /**
+   * @param {object} p { phase, altitude, holding, time, morph (0..1 since last change), temp }
+   */
+  drawPlayer(p) {
     const { ctx } = this;
-    const band = { ...base, y: base.y - base.h * 0.25, h: base.h * 0.18 };
-    const x1 = band.x + band.w / 2, z1 = band.z + band.d / 2, x0 = band.x - band.w / 2, z0 = band.z - band.d / 2;
-    const P = (x, y, z) => this.project(x, y, z, cam);
+    const R = CONFIG.PLAYER_R;
+    const x = CONFIG.PLAYER_X, y = this.playerY(p.altitude);
+    const punch = p.morph < 1 ? 1 + Math.sin(p.morph * Math.PI) * 0.22 : 1;
     ctx.save();
-    ctx.fillStyle = 'hsl(45 85% 60%)';
-    let p1 = P(x1, band.y + band.h, z0), p2 = P(x1, band.y + band.h, z1), p3 = P(x1, band.y, z1), p4 = P(x1, band.y, z0);
-    ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.lineTo(...p3); ctx.lineTo(...p4); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'hsl(45 80% 48%)';
-    p1 = P(x0, band.y + band.h, z1); p2 = P(x1, band.y + band.h, z1); p3 = P(x1, band.y, z1); p4 = P(x0, band.y, z1);
-    ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.lineTo(...p3); ctx.lineTo(...p4); ctx.closePath(); ctx.fill();
+    ctx.translate(x, y);
+    const c = PHASE_COLORS[p.phase];
+
+    if (p.phase === PHASE.ICE) {
+      const jit = (Math.random() - 0.5) * 1.2;
+      ctx.translate(jit, 0);
+      ctx.scale(punch, punch);
+      ctx.fillStyle = c.edge; this.roundRect(-R, -R, R * 2, R * 2, 6); ctx.fill();
+      ctx.fillStyle = c.fill; this.roundRect(-R + 3, -R + 3, R * 2 - 6, R * 2 - 6, 5); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; this.roundRect(-R + 6, -R + 6, 9, 9, 3); ctx.fill();
+      ctx.strokeStyle = 'rgba(80,150,190,0.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(R - 6, -R + 8); ctx.lineTo(R - 12, 2); ctx.lineTo(R - 6, 10); ctx.stroke();
+      this.drawFace(0, 0, R, 'ice', p.time);
+    } else if (p.phase === PHASE.WATER) {
+      const wob = 1 + Math.sin(p.time * 9) * 0.05;
+      ctx.scale(punch * wob, punch / wob);
+      ctx.fillStyle = c.edge; this.dropPath(0, 0, R); ctx.fill();
+      ctx.fillStyle = c.fill; this.dropPath(0, 0, R - 3); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.ellipse(-R * 0.4, -R * 0.1, 4, 7, -0.4, 0, TAU); ctx.fill();
+      this.drawFace(0, 3, R, 'water', p.time);
+    } else {
+      const bob = Math.sin(p.time * 3) * 2;
+      ctx.translate(0, bob);
+      ctx.scale(punch, punch);
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = c.edge;
+      ctx.beginPath(); ctx.arc(-R * 0.55, R * 0.15, R * 0.75, 0, TAU); ctx.arc(R * 0.55, R * 0.15, R * 0.75, 0, TAU); ctx.arc(0, -R * 0.25, R * 0.85, 0, TAU); ctx.fill();
+      ctx.fillStyle = c.fill;
+      ctx.beginPath(); ctx.arc(-R * 0.55, R * 0.1, R * 0.65, 0, TAU); ctx.arc(R * 0.55, R * 0.1, R * 0.65, 0, TAU); ctx.arc(0, -R * 0.3, R * 0.75, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+      this.drawFace(0, 0, R, 'steam', p.time);
+    }
     ctx.restore();
   }
 
-  /** Whether a block is on screen (cheap vertical test; blocks are centred horizontally). */
-  visible(b, cam) {
-    const [, topY] = this.project(b.x - b.w / 2, b.y + b.h, b.z - b.d / 2, cam);
-    const [, botY] = this.project(b.x + b.w / 2, b.y, b.z + b.d / 2, cam);
-    return botY > -40 && topY < this.h + 40;
-  }
-
-  /** Draw every placed stone, bottom to top. */
-  drawTower(game, cam, seedHue) {
-    const blocks = game.blocks;
-    const base = blocks[0];
-    if (this.visible({ ...base, y: base.y - PLINTH_DEPTH, h: base.h + PLINTH_DEPTH }, cam)) this.drawPlinth(base, cam);
-    for (let i = 1; i < blocks.length; i++) {
-      const b = blocks[i];
-      if (!this.visible(b, cam)) continue;
-      this.drawBlock(b, stoneColors(b.index, seedHue), cam);
+  drawFace(x, y, R, phase, time) {
+    const { ctx } = this;
+    const blink = (Math.sin(time * 1.3) > 0.985);
+    ctx.fillStyle = '#fff';
+    const ex = x + R * 0.28, ey = y - R * 0.15, er = R * 0.22;
+    if (phase === 'steam') {
+      // sleepy half-closed eyes
+      ctx.strokeStyle = '#3b4663'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(ex - R * 0.45, ey, er, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex + R * 0.35, ey, er, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+      ctx.fillStyle = '#3b4663'; ctx.beginPath(); ctx.arc(x + R * 0.25, y + R * 0.35, 3, 0, TAU); ctx.fill();
+      return;
     }
-  }
-
-  /** Shadow of the sliding stone on the top face, then the stone itself. */
-  drawMoving(game, cam, seedHue) {
-    const m = game.moving;
-    if (!m) return;
-    const top = game.top();
-    // footprint intersection → alignment shadow
-    const x0 = Math.max(m.x - m.w / 2, top.x - top.w / 2), x1 = Math.min(m.x + m.w / 2, top.x + top.w / 2);
-    const z0 = Math.max(m.z - m.d / 2, top.z - top.d / 2), z1 = Math.min(m.z + m.d / 2, top.z + top.d / 2);
-    if (x1 > x0 && z1 > z0) {
-      const sh = { x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: x1 - x0, d: z1 - z0, y: top.y, h: top.h };
-      this.topFacePath(sh, cam);
-      this.ctx.fillStyle = 'rgba(0,0,0,0.16)';
-      this.ctx.fill();
+    for (const dx of [-R * 0.45, R * 0.35]) {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(ex + dx, ey, er, blink ? er * 0.15 : er, 0, 0, TAU); ctx.fill();
+      if (!blink) { ctx.fillStyle = '#1b2a44'; ctx.beginPath(); ctx.arc(ex + dx + er * 0.35, ey, er * 0.5, 0, TAU); ctx.fill(); }
     }
-    this.drawBlock(m, stoneColors(m.index, seedHue), cam);
+    ctx.strokeStyle = '#1b2a44'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (phase === 'ice') ctx.arc(x + R * 0.25, y + R * 0.45, R * 0.18, Math.PI * 1.15, Math.PI * 1.85); // worried
+    else ctx.arc(x + R * 0.25, y + R * 0.3, R * 0.22, Math.PI * 0.1, Math.PI * 0.9);                   // smile
+    ctx.stroke();
   }
 
-  /** Vignette to focus the eye and give HUD text contrast. */
+  /* ───────────── gauge ───────────── */
+
+  /** Horizontal thermometer in the floor strip, out of the obstacle lane. */
+  drawGauge(temp, holding) {
+    const { ctx } = this;
+    const left = 64, right = Math.min(this.viewWorldW(), CONFIG.WORLD_W) - 28;
+    const y = CONFIG.FLOOR_Y + 52, h = 14;
+    const w = right - left;
+    const xFor = (t) => left + (t / 100) * w;
+    ctx.save();
+    // tube
+    ctx.fillStyle = 'rgba(0,0,0,0.38)'; this.roundRect(left - 12, y - h / 2 - 5, w + 24, h + 10, 12); ctx.fill();
+    // bands
+    const bands = [[0, CONFIG.ICE_MAX, PHASE_COLORS.ice.fill], [CONFIG.ICE_MAX, CONFIG.STEAM_MIN, PHASE_COLORS.water.fill], [CONFIG.STEAM_MIN, 100, '#ffb36b']];
+    for (const [a, b, col] of bands) {
+      ctx.globalAlpha = 0.3; ctx.fillStyle = col;
+      ctx.fillRect(xFor(a), y - h / 2, xFor(b) - xFor(a), h);
+    }
+    ctx.globalAlpha = 1;
+    // threshold ticks
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    for (const t of [CONFIG.ICE_MAX, CONFIG.STEAM_MIN]) ctx.fillRect(xFor(t) - 1, y - h / 2 - 7, 2, h + 14);
+    // mercury
+    const g = ctx.createLinearGradient(left, 0, right, 0);
+    g.addColorStop(0, '#9fe3ff'); g.addColorStop(0.5, '#3aa7ff'); g.addColorStop(1, '#ff8a5b');
+    ctx.fillStyle = g;
+    this.roundRect(left - 4, y - h / 2 + 3, xFor(temp) - left + 4, h - 6, 4); ctx.fill();
+    // bulb (left, cold end) lights up while heating
+    ctx.fillStyle = holding ? '#ff8a5b' : '#3aa7ff';
+    ctx.beginPath(); ctx.arc(left - 22, y, 15, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(left - 27, y - 5, 4.5, 0, TAU); ctx.fill();
+    if (holding) {
+      // little flame
+      ctx.fillStyle = '#ffd36b';
+      ctx.beginPath(); ctx.moveTo(left - 29, y + 2); ctx.quadraticCurveTo(left - 22, y - 16, left - 15, y + 2); ctx.quadraticCurveTo(left - 22, y + 8, left - 29, y + 2); ctx.fill();
+    }
+    // marker
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xFor(temp), y, 6, 0, TAU); ctx.fill();
+    // phase icons above the bands
+    this.drawPhaseIcon('ice', xFor(CONFIG.ICE_MAX / 2), y - 26, 6);
+    this.drawPhaseIcon('water', xFor((CONFIG.ICE_MAX + CONFIG.STEAM_MIN) / 2), y - 26, 6);
+    this.drawPhaseIcon('steam', xFor((CONFIG.STEAM_MIN + 100) / 2), y - 26, 6);
+    ctx.restore();
+  }
+
   drawVignette() {
     const { ctx, w, h } = this;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.85);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.28)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.3)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   }
 }
-
-export { hsl, lerp };

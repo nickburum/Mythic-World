@@ -1,81 +1,70 @@
-# Sky Temple ⛩
+# MELT 💧🔥
 
-**A one-tap hyper-casual tower stacker.** Stones slide across the screen; tap to drop them. Land one perfectly and it glows. Chain perfects and your shrinking stone grows back. Miss the edge and your temple falls.
+**Hold to heat. Release to cool. Be the right state of matter.**
 
-Built entirely in this repo with zero dependencies and zero binary assets: every sprite, sky, cloud and sound is generated in code. The gameplay core is a DOM-free module designed to be ported to Unity (C#) or Xcode (Swift) — see [`docs/PORTING.md`](docs/PORTING.md).
+A one-finger hyper-casual runner with a mechanic that doesn't exist yet: your only control is a thermometer. Hold and your water drop boils into **steam** and floats over spikes. Let go and it cools back to **water** to flow through pipes. Keep cooling and it freezes into **ice** to smash glass. Geysers and cold vents shove your temperature when you least expect it.
+
+Built entirely in this repo: zero dependencies, zero binary assets, every shape, colour and sound generated in code. The rules are one DOM-free module designed to port to Unity (C#) or Xcode (Swift). See [`docs/DESIGN.md`](docs/DESIGN.md) and [`docs/PORTING.md`](docs/PORTING.md).
 
 <p align="center">
-  <img src="art/screens/title.png" width="180" alt="Title screen">
-  <img src="art/screens/gameplay.png" width="180" alt="Gameplay">
-  <img src="art/screens/perfect.png" width="180" alt="Perfect drop">
+  <img src="art/screens/title.png" width="180" alt="Title">
+  <img src="art/screens/gameplay.png" width="180" alt="Steam floating over spikes">
+  <img src="art/screens/ice.png" width="180" alt="Ice heading for glass">
   <img src="art/screens/gameover.png" width="180" alt="Game over">
 </p>
 
 ## Play
 
 ```bash
-npm start          # serves on http://localhost:8080 (any static server works)
+npm start      # http://localhost:8080 — any static server works
 ```
 
-Open it on a phone on the same network or add it to your home screen: it is a fullscreen, offline-capable PWA.
+Installable fullscreen PWA, works offline.
 
 | Input | Action |
 |------|--------|
-| Tap / click / Space | Drop the sliding stone |
-| 🔊 button | Mute (remembered) |
+| Hold (touch / mouse / Space) | Heat up |
+| Release | Cool down |
 
 ## The loop
 
-1. A stone slides back and forth above the tower, alternating X and Z axes each turn.
-2. **Tap** to drop. Whatever overhangs the stone below is sheared off and tumbles away. The next stone inherits the smaller footprint.
-3. **Perfect** (within tolerance) snaps the stone into place with a ring, a rising note and a combo counter. After 3 perfects in a row the stone regrows a little each time, up to full size.
-4. Speed ramps with score. Zones are announced at 10, 25, 50, 75, 100, 150 and 200 stones as the sky shifts from dawn through dusk, night and deep space.
-5. Miss the tower entirely → the camera pulls back to show your temple, score vs best, and an instant retry.
+1. You auto-run. A thermometer on the left shows three bands: ice, water, steam.
+2. Hold to heat, release to cool. Cross a band and you change form, with a burst, a sound and a bounce.
+3. Each obstacle lets exactly one kind of thing through. The first few of every type carry a label and the icon of the state that passes.
+4. Speed ramps, new obstacle types unlock, hazards start shoving your temperature. Named milestones mark your progress.
+5. Die and the end card tells you in one line what you were and what you needed. One tap to go again.
 
-Full design notes, retention hooks and monetisation plan: [`docs/DESIGN.md`](docs/DESIGN.md).
+Spacing between obstacles is a **time budget** derived from the state change you'll need, and a 20-seed autopilot test proves every course is beatable with a 0.25 s reaction. Details in the design doc.
 
 ## Project layout
 
 ```
-index.html                 shell + overlays (title, HUD, game over)
-css/style.css              UI chrome
-src/
-  core/
-    config.js              every tuning number (one place to balance the game)
-    stack.js               THE GAME — pure simulation, no DOM. Port this first.
-    palette.js             procedural colours: stone shades, sky bands
-  render/
-    renderer.js            2:1 isometric canvas renderer, clouds, stars, plinth
-    effects.js             falling slices, perfect rings, sparks, text pops, shake
-  audio/sfx.js             WebAudio synth: place / perfect melody / miss / milestone
-  platform/
-    input.js               one verb: tap (pointer + keyboard)
-    storage.js             best score, mute, games played (localStorage)
-    haptics.js             Vibration API; maps to UIImpactFeedbackGenerator on iOS
-  main.js                  state machine, camera, render loop, UI glue
-art/
-  icon.svg                 app icon, generated from the game's own projection
-  icon-{180,192,512,1024}.png
-  screens/*.png            store screenshots, captured from the real game
-tools/
-  make-icon.mjs            regenerates art/icon.svg
-  render-art.mjs           rasterises icons + screenshots in headless Chromium; doubles as a smoke test
-tests/stack.test.js        core rules: cut geometry, perfect snap, regrow, miss, milestones
-docs/DESIGN.md             game design document
-docs/PORTING.md            Unity / Xcode porting guide
-manifest.webmanifest, sw.js   installable, offline PWA
+index.html, css/style.css       shell + overlays
+src/core/config.js              every tuning number
+src/core/melt.js                THE GAME — pure simulation + reference autopilot. Port this first.
+src/core/palette.js             temperature-driven colours
+src/render/renderer.js          side-view canvas renderer: rock, obstacles, droplet, gauge
+src/render/effects.js           wisps, frost, bursts, deaths, text pops, shake
+src/audio/sfx.js                WebAudio synth incl. a heat-hiss bed
+src/platform/                   hold input, storage, haptics
+src/main.js                     state machine, loop, UI glue
+art/                            generated icon (SVG + PNGs) and store screenshots
+tools/make-icon.mjs             regenerates the icon
+tools/render-art.mjs            rasterises icons, captures screenshots, smoke-tests in headless Chromium
+tests/melt.test.js              rules, spacing fairness, 20-seed survival
+docs/                           design document, porting guide
+sky-temple/                     the previous prototype (a Stack-style tower game), still playable at /sky-temple/
 ```
 
 ## Develop
 
 ```bash
-npm test             # core logic tests (node:test, no deps)
-npm run icons        # regenerate PNG icons from art/icon.svg
-npm run screens      # icons + screenshots + headless smoke test (needs playwright + chromium)
-node tools/make-icon.mjs   # rebuild the SVG icon
+npm test           # MELT + Sky Temple core tests
+npm run icons      # rebuild art/icon.svg and PNGs
+npm run screens    # icons + screenshots + smoke test (needs playwright + chromium)
 ```
 
-Balance the game by editing `src/core/config.js` only. The deploy workflow runs the tests on every push and publishes `main` to GitHub Pages.
+Balance the game in `src/core/config.js` only; the survival test will tell you if a change makes the course unfair. The deploy workflow runs the tests and publishes `main` to GitHub Pages.
 
 ## License
 

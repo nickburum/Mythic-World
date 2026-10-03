@@ -1,23 +1,34 @@
 /**
- * Sky Temple — app controller.
- * Owns the state machine (title → playing → falling → over), the camera,
- * the render loop and the HTML overlays. Gameplay rules live in core/stack.js.
+ * MELT — app controller: state machine (title → playing → dying → over),
+ * input, render loop and HTML overlays. Rules live in core/melt.js.
  */
-import { StackGame } from './core/stack.js';
-import { stoneColors } from './core/palette.js';
+import { MeltGame, autopilot } from './core/melt.js';
+import { CONFIG } from './core/config.js';
 import { Renderer } from './render/renderer.js';
 import { Effects } from './render/effects.js';
 import { Sfx } from './audio/sfx.js';
 import { storage, KEYS } from './platform/storage.js';
 import { haptics } from './platform/haptics.js';
-import { bindTap } from './platform/input.js';
+import { bindHold } from './platform/input.js';
 
 const $ = (id) => document.getElementById(id);
+const STATE = Object.freeze({ TITLE: 'title', PLAYING: 'playing', DYING: 'dying', OVER: 'over' });
+const DIE_TIME = 1.0;
+const RETRY_LOCKOUT = 0.6;
 
-const STATE = Object.freeze({ TITLE: 'title', PLAYING: 'playing', FALLING: 'falling', OVER: 'over' });
-const FALL_TIME = 1.1;          // seconds between a miss and the game-over panel
-const RETRY_LOCKOUT = 0.5;      // ignore taps right after game over so a frantic tap does not restart
-const TOP_ANCHOR = 0.44;        // the tower top sits at this fraction of screen height while playing
+/** What went wrong, in one line, so every death teaches. */
+const DEATH_LINES = {
+  'spikes:ice': 'Ice is too heavy to float over spikes.',
+  'spikes:water': 'Water can\'t float. Heat up to steam!',
+  'spikes:steam': 'Steam needs a moment to rise. Heat earlier!',
+  'beam:steam': 'Steam rises into beams. Cool down to stay low.',
+  'beam:water': 'Still sinking from steam. Cool down sooner!',
+  'beam:ice': 'Still sinking from steam. Cool down sooner!',
+  'glass:water': 'Water splashes off glass. Only ice breaks it.',
+  'glass:steam': 'Steam can\'t break glass. Freeze solid!',
+  'pipe:ice': 'Ice doesn\'t fit the pipe. Melt into water.',
+  'pipe:steam': 'Steam can\'t flow through pipes. Cool to water.',
+};
 
 class App {
   constructor() {
@@ -25,41 +36,34 @@ class App {
     this.renderer = new Renderer(this.canvas);
     this.fx = new Effects(this.renderer);
     this.sfx = new Sfx();
-    this.game = new StackGame();
+    this.game = new MeltGame();
     this.state = STATE.TITLE;
-    this.seedHue = 205;
-    this.time = 0;
-    this.stateTime = 0;
+    this.time = 0; this.stateTime = 0;
     this.last = performance.now();
+    this.holding = false;
+    this.autopilot = false;        // test/screenshot hook
+    this.shownTemp = this.game.temp;
+    this.morphAge = 10;
     this.best = storage.get(KEYS.BEST, 0);
     this.games = storage.get(KEYS.GAMES, 0);
     this.muted = storage.get(KEYS.MUTED, false);
     this.sfx.setMuted(this.muted);
-
-    const K = this.renderer.baseScale();
-    this.cam = { focusY: 0, anchor: TOP_ANCHOR, K, shakeX: 0, shakeY: 0 };
-    this.camTarget = { focusY: this.game.towerHeight(), anchor: TOP_ANCHOR, K };
-    this.cam.focusY = this.camTarget.focusY;
     this.scoreScale = 1;
 
     this.ui = {
-      title: $('title'), hud: $('hud'), over: $('over'),
-      score: $('score'), best: $('best'), overScore: $('over-score'), overBest: $('over-best'),
-      newBest: $('new-best'), retry: $('retry'), share: $('share'), mute: $('mute'),
-      overCombo: $('over-combo'),
+      title: $('title'), hud: $('hud'), over: $('over'), score: $('score'), best: $('best'),
+      overScore: $('over-score'), overBest: $('over-best'), overClose: $('over-close'), newBest: $('new-best'),
+      deathLine: $('death-line'), retry: $('retry'), share: $('share'), mute: $('mute'),
     };
     this.ui.best.textContent = this.best;
     this.applyMuteIcon();
-
     this.bindGame();
     this.bindUi();
+    this.onResize();
     window.addEventListener('resize', () => this.onResize());
     window.addEventListener('orientationchange', () => this.onResize());
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
-
-    // test hook (used by tools/render-art.mjs to script screenshots)
-    window.__skyTemple = this;
-
+    window.__melt = this;
     requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -67,15 +71,16 @@ class App {
 
   bindGame() {
     const g = this.game;
-    g.on('perfect', (r) => this.onPerfect(r));
-    g.on('cut', (r) => this.onCut(r));
-    g.on('miss', (r) => this.onMiss(r));
+    g.on('phase', (e) => this.onPhase(e));
+    g.on('pass', (e) => this.onPass(e));
+    g.on('nearmiss', () => this.onCloseCall());
+    g.on('hazard', (o) => this.onHazard(o));
+    g.on('die', (e) => this.onDie(e));
     g.on('milestone', (m) => this.onMilestone(m));
-    g.on('place', () => this.onPlace());
   }
 
   bindUi() {
-    bindTap(this.canvas, () => this.tap());
+    bindHold(this.canvas, { onPress: () => this.press(), onRelease: () => this.release() });
     this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.sfx.tap(); this.start(); });
     this.ui.share.addEventListener('click', () => this.share());
     this.ui.mute.addEventListener('click', () => this.toggleMute());
@@ -84,159 +89,127 @@ class App {
 
   onResize() {
     this.renderer.resize();
-    this.updateCameraTarget(true);
+    this.game.setViewWidth(this.renderer.viewWorldW());
   }
 
   /* ───────────── state machine ───────────── */
 
   setState(s) {
-    this.state = s;
-    this.stateTime = 0;
+    this.state = s; this.stateTime = 0;
     document.body.dataset.state = s;
     this.ui.title.hidden = s !== STATE.TITLE;
-    this.ui.hud.hidden = !(s === STATE.PLAYING || s === STATE.FALLING);
+    this.ui.hud.hidden = !(s === STATE.PLAYING || s === STATE.DYING);
     this.ui.over.hidden = s !== STATE.OVER;
   }
 
-  tap() {
+  press() {
     this.sfx.unlock();
-    switch (this.state) {
-      case STATE.TITLE:
-        this.start();
-        break;
-      case STATE.PLAYING:
-        this.game.drop();
-        break;
-      case STATE.OVER:
-        if (this.stateTime > RETRY_LOCKOUT) { this.sfx.tap(); this.start(); }
-        break;
-      default:
-        break;
-    }
+    if (this.state === STATE.TITLE) this.start();
+    else if (this.state === STATE.OVER && this.stateTime > RETRY_LOCKOUT) { this.sfx.tap(); this.start(); }
+    this.holding = true;
   }
 
+  release() { this.holding = false; }
+
   start() {
-    this.seedHue = Math.floor(Math.random() * 360);
     this.game.reset();
+    this.game.setViewWidth(this.renderer.viewWorldW());
     this.fx.clear();
+    this.shownTemp = this.game.temp;
+    this.morphAge = 10;
     this.setState(STATE.PLAYING);
     this.updateScore(0);
-    this.updateCameraTarget(true);
-    this.cam.K = this.camTarget.K;
-    this.cam.focusY = this.camTarget.focusY;
-    this.cam.anchor = this.camTarget.anchor;
   }
 
   gameOver() {
-    this.games += 1;
-    storage.set(KEYS.GAMES, this.games);
+    this.games += 1; storage.set(KEYS.GAMES, this.games);
     const score = this.game.score;
     const isBest = score > this.best;
-    if (isBest) {
-      this.best = score;
-      storage.set(KEYS.BEST, score);
-    }
+    if (isBest) { this.best = score; storage.set(KEYS.BEST, score); }
     this.ui.overScore.textContent = score;
     this.ui.overBest.textContent = this.best;
+    this.ui.overClose.textContent = this.game.closeCalls;
     this.ui.best.textContent = this.best;
     this.ui.newBest.hidden = !isBest || score === 0;
-    this.ui.overCombo.textContent = this.game.bestCombo >= 3 ? `Best streak ×${this.game.bestCombo}` : '';
+    const d = this.death;
+    this.ui.deathLine.textContent = d ? (DEATH_LINES[`${d.obstacle.type}:${d.phase}`] || '') : '';
     this.setState(STATE.OVER);
   }
 
   /* ───────────── game events ───────────── */
 
-  onPlace() {
-    this.updateScore(this.game.score);
-    this.updateCameraTarget();
+  playerPos() {
+    return [CONFIG.PLAYER_X, this.renderer.playerY(this.game.altitude)];
   }
 
-  onPerfect(r) {
-    const hue = stoneColors(r.block.index, this.seedHue).hue;
-    this.sfx.perfect(r.combo);
+  onPhase(e) {
+    this.morphAge = 0;
+    this.sfx.phase(e.to, e.from);
     haptics.light();
-    this.fx.addRing(r.block, hue, r.combo >= 3 ? 2 : 1);
-    const [px, py] = this.renderer.project(r.block.x, r.block.y + r.block.h, r.block.z, this.cam);
-    if (r.combo >= 2) {
-      this.fx.addPop(`×${r.combo}`, px, py - 40, { size: 30, color: '#fff' });
-    } else {
-      this.fx.addPop('PERFECT', px, py - 40, { size: 24, color: '#fff' });
-    }
-    if (r.grew) {
-      this.sfx.grow();
-      this.fx.addSparks(px, py, hue, 22, 1.2);
-    }
+    const [x, y] = this.playerPos();
+    this.fx.phaseBurst(x, y, e.to);
   }
 
-  onCut(r) {
-    this.sfx.place();
-    haptics.light();
-    this.fx.addFallingPiece(r.cut, r.axis, Math.sign(r.delta) || 1, this.seedHue);
+  onPass(e) {
+    this.updateScore(e.score);
+    if (!e.closeCall) this.sfx.pass();
   }
 
-  onMiss(r) {
-    this.sfx.miss();
+  onCloseCall() {
+    this.sfx.closeCall();
+    haptics.medium();
+    const [x, y] = this.playerPos();
+    const [sx, sy] = this.renderer.toScreen(x, y);
+    this.fx.addPop('CLOSE CALL!', sx + 10, sy - 50 * this.renderer.scale, { size: 22, color: 'hsl(45 100% 75%)' });
+  }
+
+  onHazard(o) {
+    this.sfx.hazard(o.type);
+    haptics.medium();
+    const [x, y] = this.playerPos();
+    this.fx.hazardBurst(x, y, o.type);
+    const [sx, sy] = this.renderer.toScreen(x, y);
+    this.fx.addPop(o.type === 'geyser' ? '+HOT' : '−COLD', sx, sy - 40 * this.renderer.scale, { size: 20, color: o.type === 'geyser' ? '#ffb36b' : '#bdf0ff', life: 0.7 });
+  }
+
+  onDie(e) {
+    this.death = e;
+    this.sfx.die(e.phase);
     haptics.heavy();
-    this.fx.addShake(14);
-    this.fx.addFallingPiece(r.block, r.axis, Math.sign(r.delta) || 1, this.seedHue);
-    this.setState(STATE.FALLING);
-    this.updateCameraTarget();
+    const [x, y] = this.playerPos();
+    this.fx.deathBurst(x, y, e.phase);
+    this.setState(STATE.DYING);
   }
 
   onMilestone(m) {
     this.sfx.milestone();
     haptics.medium();
-    this.fx.addPop(m.name.toUpperCase(), this.renderer.w / 2, this.renderer.h * 0.3, {
-      size: Math.min(34, this.renderer.w / 11), color: 'hsl(45 100% 75%)', life: 1.8, rise: 30, weight: 900,
-    });
-    const [px, py] = this.renderer.project(0, this.game.towerHeight(), 0, this.cam);
-    this.fx.addSparks(px, py, 45, 30, 1.4);
+    this.fx.addPop(m.name.toUpperCase(), this.renderer.w / 2, this.renderer.h * 0.3, { size: Math.min(34, this.renderer.w / 11), color: 'hsl(45 100% 75%)', life: 1.8, rise: 30 });
   }
 
-  updateScore(n) {
-    this.ui.score.textContent = n;
-    this.scoreScale = 1.35;
-  }
-
-  /* ───────────── camera ───────────── */
-
-  updateCameraTarget(snap = false) {
-    const baseK = this.renderer.baseScale();
-    const T = this.game.towerHeight();
-    if (this.state === STATE.FALLING || this.state === STATE.OVER) {
-      // zoom out to show the whole tower
-      const fitK = (this.renderer.h * 0.6) / Math.max(T + 0.5, 1);
-      this.camTarget = { focusY: T / 2, anchor: 0.5, K: Math.min(baseK, fitK) };
-    } else {
-      this.camTarget = { focusY: T, anchor: TOP_ANCHOR, K: baseK };
-    }
-    if (snap) {
-      this.cam.focusY = this.camTarget.focusY;
-      this.cam.anchor = this.camTarget.anchor;
-      this.cam.K = this.camTarget.K;
-    }
-  }
-
-  tickCamera(dt) {
-    const k = 1 - Math.pow(0.001, dt); // ~exponential smoothing, frame-rate independent
-    this.cam.focusY += (this.camTarget.focusY - this.cam.focusY) * k * 0.9;
-    this.cam.anchor += (this.camTarget.anchor - this.cam.anchor) * k * 0.7;
-    this.cam.K += (this.camTarget.K - this.cam.K) * k * 0.7;
-  }
+  updateScore(n) { this.ui.score.textContent = n; this.scoreScale = 1.3; }
 
   /* ───────────── loop ───────────── */
 
   frame(now) {
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
-    this.time += dt;
-    this.stateTime += dt;
+    this.time += dt; this.stateTime += dt; this.morphAge += dt;
 
-    if (this.state === STATE.PLAYING) this.game.update(dt);
-    if (this.state === STATE.FALLING && this.stateTime >= FALL_TIME) this.gameOver();
+    const g = this.game;
+    if (this.state === STATE.PLAYING) {
+      const hold = this.autopilot ? autopilot(g) : this.holding;
+      g.update(dt, hold);
+      const [x, y] = this.playerPos();
+      this.fx.ambient(x, y, hold, g.phase, dt);
+      this.sfx.setHeat(hold ? 1 : 0);
+    } else {
+      this.sfx.setHeat(0);
+    }
+    if (this.state === STATE.DYING && this.stateTime >= DIE_TIME) this.gameOver();
 
-    this.tickCamera(dt);
-    this.fx.update(dt, this.cam);
+    this.shownTemp += (g.temp - this.shownTemp) * Math.min(1, dt * 6);
+    this.fx.update(dt);
     this.scoreScale += (1 - this.scoreScale) * Math.min(1, dt * 12);
     this.ui.score.style.transform = `scale(${this.scoreScale.toFixed(3)})`;
 
@@ -245,15 +218,19 @@ class App {
   }
 
   draw() {
-    const r = this.renderer;
-    const g = this.game;
-    const heightStones = g.blocks.length - 1;
-    const sky = r.drawSky(heightStones);
-    r.drawStars(sky.night, this.cam, this.time);
-    r.drawClouds(this.cam, this.time, sky.night);
-    r.drawTower(g, this.cam, this.seedHue);
-    this.fx.drawWorld(this.cam);
-    if (this.state === STATE.PLAYING) r.drawMoving(g, this.cam, this.seedHue);
+    const r = this.renderer, g = this.game;
+    r.drawSky(this.shownTemp);
+    r.drawMotes(g.distance, this.time, this.shownTemp);
+    const [sx, sy] = this.fx.shakeOffset();
+    r.begin(sx, sy);
+    r.drawRock(g.distance);
+    for (const o of g.obstacles) r.drawObstacle(o, this.time);
+    if (this.state !== STATE.DYING && this.state !== STATE.OVER) {
+      r.drawPlayer({ phase: g.phase, altitude: g.altitude, holding: this.holding, time: this.time, morph: Math.min(1, this.morphAge / 0.35), temp: g.temp });
+    }
+    this.fx.drawWorld();
+    if (this.state !== STATE.TITLE) r.drawGauge(g.temp, this.state === STATE.PLAYING && (this.autopilot ? autopilot(g) : this.holding));
+    r.end();
     r.drawVignette();
     this.fx.drawScreen();
   }
@@ -261,31 +238,21 @@ class App {
   /* ───────────── misc UI ───────────── */
 
   toggleMute() {
-    this.muted = !this.muted;
-    storage.set(KEYS.MUTED, this.muted);
-    this.sfx.setMuted(this.muted);
-    this.sfx.unlock();
-    this.applyMuteIcon();
+    this.muted = !this.muted; storage.set(KEYS.MUTED, this.muted);
+    this.sfx.setMuted(this.muted); this.sfx.unlock(); this.applyMuteIcon();
     if (!this.muted) this.sfx.tap();
   }
-
   applyMuteIcon() {
     this.ui.mute.textContent = this.muted ? '🔇' : '🔊';
     this.ui.mute.setAttribute('aria-label', this.muted ? 'Unmute' : 'Mute');
   }
-
   async share() {
-    const text = `I stacked ${this.game.score} stones in Sky Temple ⛩️ Can you beat me?`;
-    try {
-      await navigator.share({ title: 'Sky Temple', text, url: location.href });
-    } catch {
-      /* user cancelled */
-    }
+    const text = `I survived ${this.game.score} obstacles as ice, water and steam in MELT 💧 Can you beat me?`;
+    try { await navigator.share({ title: 'MELT', text, url: location.href }); } catch { /* cancelled */ }
   }
 }
 
 window.addEventListener('DOMContentLoaded', () => new App());
-
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }

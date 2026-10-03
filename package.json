@@ -1,13 +1,13 @@
 {
-  "name": "sky-temple",
+  "name": "melt",
   "version": "1.0.0",
-  "description": "Sky Temple — a one-tap hyper-casual tower stacker. Pure HTML5 canvas, no dependencies.",
+  "description": "MELT — hold to heat, release to cool. A hyper-casual runner where your state of matter is the only control.",
   "type": "module",
   "private": true,
   "scripts": {
     "start": "npx http-server . -p 8080 -c-1",
-    "test": "node --test tests/*.test.js",
-    "icons": "node tools/render-art.mjs",
+    "test": "node --test tests/*.test.js && npm --prefix sky-temple test",
+    "icons": "node tools/make-icon.mjs && node tools/render-art.mjs",
     "screens": "node tools/render-art.mjs --screens"
   },
   "license": "MIT"

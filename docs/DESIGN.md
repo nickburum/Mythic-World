@@ -1,79 +1,64 @@
-# Sky Temple — Game Design Document
+# MELT — Game Design Document
 
 ## One-liner
 
-**Tap to stack. Land perfectly to grow.** A one-touch tower stacker where you build a temple from earth to the stars.
+**Hold to heat. Release to cool. Be the right state of matter.**
+A one-finger endless runner where the only control is your temperature, and your temperature decides whether you are ice, water or steam.
 
-## Why this loop
+## Why it is new
 
-The stacking loop has been a fixture of the App Store's free charts since 2016 and keeps resurfacing because it checks every hyper-casual box:
+Hyper-casual verbs are almost always spatial: tap to jump, hold to fly, swipe to switch lane, tap to drop. MELT's verb is **thermal**. The finger never moves the character; it moves a thermometer, and the character's form, altitude and abilities all fall out of that one continuous value:
 
-| Hyper-casual requirement | How Sky Temple meets it |
+| Phase | Temperature | Where it is | Gets through |
+|---|---|---|---|
+| Ice | below 35° | on the floor | glass panes (smashes them) |
+| Water | 35° – 70° | on the floor | pipes (flows through) |
+| Steam | 70° and up | floats to the ceiling | floor spikes (floats over) |
+
+Ceiling beams block steam and let anything on the floor pass. Geysers and cold vents shove your temperature by 26° without warning.
+
+The depth comes from the thermometer being continuous and the rates asymmetric-ish (heat 60°/s, cool 56°/s): an expert hovers just under a threshold to flip states instantly, a beginner swings wildly between extremes. Phase changes also take a beat to *act* (steam needs 0.12 s to rise), so the skill is anticipation, which is exactly the "near-miss" feel hyper-casual lives on.
+
+## Hyper-casual checklist
+
+| Requirement | MELT |
 |---|---|
-| Understood in under 3 seconds | One stone slides, you tap, it lands. No tutorial. |
-| One input | Tap anywhere. Works thumb-only, one-handed, in portrait. |
-| 30–60 second sessions | A run ends in a single mistake; average run ~40 s. |
-| Near-miss failure | You can always see exactly how far off you were. The slice falls away. |
-| "One more go" | Retry is one tap, with no load screen. The sky and stone hue reset to a new seed each run so every run looks fresh. |
-| Visual progression | Hue drifts every stone; the sky passes through dawn → day → dusk → night → deep space → nebula. |
-| Shareable moment | Game-over pulls the camera out to show the whole tower with the score. Native share sheet. |
+| Understood in 3 seconds | Title screen legend: three chips, three verbs. First obstacles carry a label (FLOAT / STAY LOW / ICE ONLY / WATER ONLY) and the icon of the state that passes. |
+| One input | Hold anywhere. Thumb-only, one-handed, portrait. |
+| 30–60 s sessions | One mistake ends the run. |
+| Near-miss failure | Every death line says exactly what state you were and what you needed ("Water can't float. Heat up to steam!"). |
+| "One more go" | One tap retry, no load. Each death teaches a rule. |
+| Visual progression | Background tints from icy teal to ember as you heat; new obstacle types unlock at scores 4, 7, 14, 19; named milestones at 10/20/35/50/75/100/150. |
+| Shareable | Score + close-call count on the end card, native share sheet. |
 
-## Core mechanics
+## Fairness engine (the important bit)
 
-### Sliding stone
-- Alternates axis each turn (X, then Z) so the player's eye never settles into a rhythm.
-- Linear back-and-forth motion (not sinusoidal) so timing reads consistently.
-- Starts on a random side so the first-frame tap is not learnable.
-- Speed: `BASE_SPEED + score × SPEED_PER_LEVEL`, capped at `MAX_SPEED` (see `src/core/config.js`).
+Obstacle spacing is a **time budget, not a distance**, so it stays fair as speed ramps:
 
-### Drop
-- **Overlap** = size of the stone below − |centre offset|.
-- **Cut** when overlap > 0 but offset > tolerance: the overhang becomes a falling slice, the kept piece becomes the new footprint, and the next stone inherits it. The tower visibly narrows under pressure.
-- **Perfect** when |offset| ≤ `PERFECT_TOLERANCE`: snap to exact alignment. Combo +1.
-- **Regrow**: from combo 3 onward every perfect adds `GROW_AMOUNT` to the footprint, back up to full size. This is the comeback mechanic that turns a bad run into a tense one.
-- **Miss** when overlap ≤ `MIN_SIZE`: run ends.
+- Same state needed → 0.6 s · Adjacent state (ice↔water, water↔steam) → 1.1 s · Opposite (ice↔steam) → 1.75 s.
+- Budgets are multiplied by a difficulty factor easing from 1.7 at score 0 to 1.0 at score 45.
+- After an obstacle that accepts several states (a beam), the gap is sized for the **worst** state the player may legitimately be in, so no valid choice is ever punished.
+- A hazard may only sit in a gap of at least 1.2 s, is placed 30 % in, and grows that gap by 0.6 s so the shove is a surprise but never a trap.
+- `tests/melt.test.js` proves it: a reference autopilot with a 0.25 s reaction delay must survive 120 obstacles on 20 random seeds. Tune anything in `config.js` and the test tells you if you broke fairness.
 
-### Score & progression
-- Score = stones placed.
-- Milestones at 10 / 25 / 50 / 75 / 100 / 150 / 200 announce named zones ("Above the Clouds", "Mount Olympus", "Among the Stars"…) with a fanfare and gold burst.
-- Best score and best streak persist locally.
+## Feel
 
-## Feel ("juice") checklist
+- Phase change: colour burst in the new state's colour (shards for ice, drops for water, puffs for steam), squash-and-stretch punch, signature sound (crack / bloop / whoosh), light haptic.
+- Holding: ember wisps rise from the droplet and a heat hiss plays; cooling throws off frost sparkles.
+- Close call (phase changed within 0.32 s of passing): gold pop, chime, medium haptic.
+- Death: shatter, splat or disperse by phase; screen shake; one-line lesson on the end card.
+- The droplet has a face: worried as ice, smiling as water, sleepy as steam.
 
-- Perfect: expanding glowing ring (double ring at combo ≥ 3), pentatonic note rising with the combo, light haptic, "PERFECT" / "×N" pop.
-- Cut: thud, slice tumbles with gravity and spin.
-- Grow: sparkle burst + ascending chirp.
-- Miss: heavy haptic, screen shake, the whole stone tumbles, 1.1 s beat, then camera zooms out to reveal the full tower.
-- Score digits scale-pop on every change.
-- Camera eases up with the tower; the moving stone casts an alignment shadow onto the top face.
+## Retention & monetisation hooks (designed for, not built)
 
-## Art direction
-
-- Flat-shaded 2:1 isometric boxes with three tones (top / right / left) and a lit rim.
-- HSL hue drift of 6° per stone; saturation breathes with a slow sine so long towers do not flatten.
-- Marble plinth with gold band roots the tower and sells the "temple" theme.
-- Soft white clouds (parallax, drifting) fade out as stars fade in.
-- All art is code: nothing to export, resize or license.
-
-## Audio
-
-Synthesised in WebAudio: filtered noise for impacts, sine/triangle tones for feedback, a major pentatonic ladder for perfect combos so streaks turn into a melody. Mute toggle persisted.
-
-## Retention & monetisation hooks (not yet implemented, designed for)
-
-- **Rewarded video "Revive"**: after a miss, one revive per run restores the last stone at full footprint. Hook point: `App.onMiss` before `setState(FALLING)`.
-- **Interstitials**: between runs, frequency-capped (e.g. every 3rd game over, never before 60 s of play). Hook point: `App.gameOver`.
-- **Stone skins**: unlock palettes (marble, obsidian, jade, gold) with earned coins or as a no-ads IAP. Hook point: `seedHue`/`stoneColors`.
-- **Daily best / streaks**: local notifications "Your temple awaits" at a quiet hour.
-- **Leaderboards**: Game Center / Play Games on score; the core already exposes `score`, `bestCombo`, `perfects`.
-
-## Tuning knobs
-
-Everything lives in `src/core/config.js`. Suggested first A/B tests: `PERFECT_TOLERANCE` (0.07–0.10), `GROW_AFTER_COMBO` (3 vs 5), `SPEED_PER_LEVEL`.
+- **Rewarded revive**: one per run, restores you in the state the obstacle needed. Hook: `App.onDie`.
+- **Skins**: alternative droplets (lava / mercury / honey) that recolour `PHASE_COLORS`.
+- **Daily temperature**: a seeded daily course (`MeltGame({ random })` already takes a seeded PRNG) with a shared leaderboard.
+- **Interstitials**: every 3rd run, never before 60 s of play. Hook: `App.gameOver`.
 
 ## Store copy
 
-**Title:** Sky Temple — Stack to the Gods
-**Subtitle:** One tap. Infinite climb.
-**Keywords:** stack, tower, tap, hyper casual, one tap, zen, build, temple, perfect, timing
-**Description:** Tap to drop the stone. Land it perfectly and it glows. Chain perfects to rebuild your tower and climb through clouds, dusk and stars to the halls of the gods. One finger, endless height. How high can your temple rise?
+**Title:** MELT — Ice, Water, Steam
+**Subtitle:** Hold to heat. Release to cool.
+**Keywords:** melt, ice, steam, water, physics, runner, one tap, hyper casual, temperature, science
+**Description:** Your finger is a flame. Hold to heat your little drop into steam and float over spikes. Let go to cool into water and flow through pipes. Freeze solid to smash glass. Every obstacle needs a different state of matter, and every second counts. One finger. Three forms. How far can you run?

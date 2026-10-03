@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>Sky Temple</title>
-  <meta name="description" content="Tap to stack. Land perfectly to grow. Build a temple to the gods in this one-tap hyper-casual game." />
-  <meta name="theme-color" content="#2a6fb8" />
+  <title>MELT</title>
+  <meta name="description" content="Hold to heat, release to cool. Be ice, water or steam at the right moment in this one-finger hyper-casual runner." />
+  <meta name="theme-color" content="#1b2a44" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Sky Temple" />
-  <meta property="og:title" content="Sky Temple" />
-  <meta property="og:description" content="Tap to stack. Land perfectly to grow. How high can you build?" />
+  <meta name="apple-mobile-web-app-title" content="MELT" />
+  <meta property="og:title" content="MELT" />
+  <meta property="og:description" content="Hold to heat. Release to cool. Be the right state of matter." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="art/screens/gameplay.png" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -20,16 +20,21 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body data-state="title">
-  <canvas id="game" aria-label="Sky Temple game"></canvas>
+  <canvas id="game" aria-label="MELT game"></canvas>
 
   <!-- Title -->
   <section id="title" class="overlay" data-ui>
     <div class="title-block">
-      <div class="eyebrow">✦ one tap · infinite climb ✦</div>
-      <h1 class="logo"><span>SKY</span><span>TEMPLE</span></h1>
-      <p class="tagline">Stack the stones. Land perfectly to grow.<br>Build a temple to the gods.</p>
+      <div class="eyebrow">✦ one finger · three states ✦</div>
+      <h1 class="logo">MELT</h1>
+      <p class="tagline">Hold to heat. Release to cool.<br>Be the right state of matter.</p>
+      <div class="legend">
+        <div class="leg"><span class="chip ice"></span>ICE<small>smashes glass</small></div>
+        <div class="leg"><span class="chip water"></span>WATER<small>flows through pipes</small></div>
+        <div class="leg"><span class="chip steam"></span>STEAM<small>floats over spikes</small></div>
+      </div>
     </div>
-    <div class="tap-hint" aria-hidden="true"><span class="finger">👆</span> TAP TO PLAY</div>
+    <div class="tap-hint" aria-hidden="true"><span class="finger">👆</span> HOLD TO PLAY</div>
     <div class="title-best">BEST <strong id="best">0</strong></div>
   </section>
 
@@ -42,15 +47,16 @@
   <section id="over" class="overlay" data-ui hidden>
     <div class="panel">
       <div id="new-best" class="new-best" hidden>✦ NEW BEST ✦</div>
+      <div id="death-line" class="death-line"></div>
       <div class="label">SCORE</div>
       <div id="over-score" class="big">0</div>
       <div class="row">
         <div class="stat"><div class="label">BEST</div><div id="over-best" class="mid">0</div></div>
+        <div class="stat"><div class="label">CLOSE CALLS</div><div id="over-close" class="mid">0</div></div>
       </div>
-      <div id="over-combo" class="combo"></div>
       <button id="retry" class="btn primary" type="button">PLAY AGAIN</button>
       <button id="share" class="btn ghost" type="button">SHARE</button>
-      <div class="hint">or tap anywhere</div>
+      <div class="hint">or hold anywhere</div>
     </div>
   </section>
 

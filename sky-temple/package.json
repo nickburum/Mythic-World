@@ -1,0 +1,14 @@
+{
+  "name": "sky-temple",
+  "version": "1.0.0",
+  "description": "Sky Temple — a one-tap hyper-casual tower stacker. Pure HTML5 canvas, no dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "npx http-server . -p 8080 -c-1",
+    "test": "node --test tests/*.test.js",
+    "icons": "node tools/render-art.mjs",
+    "screens": "node tools/render-art.mjs --screens"
+  },
+  "license": "MIT"
+}

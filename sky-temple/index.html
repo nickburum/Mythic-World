@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Sky Temple</title>
+  <meta name="description" content="Tap to stack. Land perfectly to grow. Build a temple to the gods in this one-tap hyper-casual game." />
+  <meta name="theme-color" content="#2a6fb8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Sky Temple" />
+  <meta property="og:title" content="Sky Temple" />
+  <meta property="og:description" content="Tap to stack. Land perfectly to grow. How high can you build?" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="art/screens/gameplay.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="art/icon.svg" />
+  <link rel="apple-touch-icon" href="art/icon-180.png" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-state="title">
+  <canvas id="game" aria-label="Sky Temple game"></canvas>
+
+  <!-- Title -->
+  <section id="title" class="overlay" data-ui>
+    <div class="title-block">
+      <div class="eyebrow">✦ one tap · infinite climb ✦</div>
+      <h1 class="logo"><span>SKY</span><span>TEMPLE</span></h1>
+      <p class="tagline">Stack the stones. Land perfectly to grow.<br>Build a temple to the gods.</p>
+    </div>
+    <div class="tap-hint" aria-hidden="true"><span class="finger">👆</span> TAP TO PLAY</div>
+    <div class="title-best">BEST <strong id="best">0</strong></div>
+  </section>
+
+  <!-- HUD -->
+  <section id="hud" class="overlay no-block" hidden>
+    <div id="score" class="score">0</div>
+  </section>
+
+  <!-- Game over -->
+  <section id="over" class="overlay" data-ui hidden>
+    <div class="panel">
+      <div id="new-best" class="new-best" hidden>✦ NEW BEST ✦</div>
+      <div class="label">SCORE</div>
+      <div id="over-score" class="big">0</div>
+      <div class="row">
+        <div class="stat"><div class="label">BEST</div><div id="over-best" class="mid">0</div></div>
+      </div>
+      <div id="over-combo" class="combo"></div>
+      <button id="retry" class="btn primary" type="button">PLAY AGAIN</button>
+      <button id="share" class="btn ghost" type="button">SHARE</button>
+      <div class="hint">or tap anywhere</div>
+    </div>
+  </section>
+
+  <button id="mute" class="icon-btn" type="button" data-ui aria-label="Mute">🔊</button>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
