@@ -13,6 +13,7 @@
 
   const GAMES = [
     { id: 'melt', name: 'MELT', tag: 'Hold to heat, release to cool', href: base, icon: base + 'art/icon-192.png', hue: '#3aa7ff' },
+    { id: 'skip', name: 'SKIP', tag: 'Skip a stone across a sunset lake', href: base + 'skip/', icon: base + 'skip/art/icon-192.png', hue: '#ffb36b' },
     { id: 'sky-temple', name: 'Sky Temple', tag: 'Tap to stack to the gods', href: base + 'sky-temple/', icon: base + 'sky-temple/art/icon-192.png', hue: '#ff9a5b' },
   ];
 
