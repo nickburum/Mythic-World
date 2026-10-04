@@ -51,12 +51,27 @@ after your first run **LEADERBOARD ▸ OPEN GAME CENTER** showing the global boa
 |---|---|
 | JS → native | `{ type: 'authenticate' }` |
 | JS → native | `{ type: 'submit', leaderboardID, score }` — integer score, metres × 10 |
-| JS → native | `{ type: 'show', leaderboardID }` |
+| JS → native | `{ type: 'show', leaderboardID, scope }` — `scope` is `'global'` or `'friends'` (GKLeaderboard playerScope) |
 | native → JS | `GameCenterBridge.onAuth({ authenticated, alias })` |
 | native → JS | `GameCenterBridge.onSubmitted({ ok, error })` |
 
 The JS side lives in `src/platform/leaderboard.js` and is covered by
 `tests/skip.test.js` (local board ordering, ranks, best).
+
+## Competing with friends
+
+Two layers, both already wired in `src/main.js`:
+
+- **Game Center friends** — the GLOBAL tab shows *Game Center Friends*, which presents the
+  leaderboard with `playerScope = .friendsOnly`. Players add friends in the Game Center
+  settings on their device; nothing extra to build.
+- **Challenge links (works everywhere, no server)** — every run is played on a seeded lake.
+  The result card's *Challenge a friend* button shares a link `…/skip/#c=SEED.SCORE10.TAG`.
+  Opening it shows a banner, *Accept* plays the identical lake, and the result card says who
+  won. *Send result* shares `#c=SEED.SCORE10.TAG.REPLY10.REPLYTAG` back; the challenger sees
+  the outcome and a *Rematch* button. Friends' bests collect in the FRIENDS tab. In the iOS
+  shell these links open the app when you register the site as a Universal Link
+  (`applinks:` associated domain) or simply as a custom URL scheme that forwards the fragment.
 
 ## Android
 

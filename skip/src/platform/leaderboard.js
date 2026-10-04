@@ -24,7 +24,7 @@ export class LocalBoard {
     this.store = store; this.key = key; this.size = size;
     this.entries = store.get(key, []);
   }
-  /** @returns {{score:number, at:number}[]} sorted desc */
+  /** @returns {{score:number, at:number, tag:string}[]} sorted desc */
   top(n = this.size) { return this.entries.slice(0, n); }
   best() { return this.entries.length ? this.entries[0].score : 0; }
   /** 1-based rank the score would hold, or null if it misses the board. */
@@ -32,8 +32,8 @@ export class LocalBoard {
     const i = this.entries.findIndex(e => e.score === score);
     return i >= 0 ? i + 1 : null;
   }
-  add(score, at = Date.now()) {
-    this.entries.push({ score, at });
+  add(score, at = Date.now(), tag = 'YOU') {
+    this.entries.push({ score, at, tag });
     this.entries.sort((a, b) => b.score - a.score || a.at - b.at);
     this.entries = this.entries.slice(0, this.size);
     this.store.set(this.key, this.entries);
@@ -45,9 +45,11 @@ export class Leaderboard {
   /**
    * @param {{ leaderboardID: string, store: {get:Function,set:Function}, key?: string }} opts
    */
-  constructor({ leaderboardID, store, key = 'board' }) {
+  constructor({ leaderboardID, store, key = 'board', friendsKey = 'friends' }) {
     this.leaderboardID = leaderboardID;
     this.local = new LocalBoard(store, key);
+    /** Results exchanged with friends through challenge links. */
+    this.friends = new FriendsBoard(store, friendsKey);
     this.status = this.nativeAvailable ? 'connecting' : 'local';
     this.alias = '';
     this.listeners = [];
@@ -80,18 +82,41 @@ export class Leaderboard {
    * @param {number} distance metres
    * @returns {{ rank: number|null, isBest: boolean }}
    */
-  submit(distance) {
+  submit(distance, tag = 'YOU') {
     const score = Math.round(distance * 10) / 10;
     const wasBest = this.local.best();
-    const rank = this.local.add(score);
+    const rank = this.local.add(score, Date.now(), tag);
     if (this.nativeAvailable) this.post({ type: 'submit', leaderboardID: this.leaderboardID, score: Math.round(distance * 10) });
     return { rank, isBest: score > wasBest };
   }
 
-  /** Open the native Game Center sheet; returns false when unavailable (caller shows the local list). */
-  showNative() {
+  /**
+   * Open the native Game Center sheet; returns false when unavailable (caller shows the local list).
+   * @param {'global'|'friends'} scope
+   */
+  showNative(scope = 'global') {
     if (!this.nativeAvailable) return false;
-    this.post({ type: 'show', leaderboardID: this.leaderboardID });
+    this.post({ type: 'show', leaderboardID: this.leaderboardID, scope });
+    return true;
+  }
+}
+
+/**
+ * Friends' results collected from challenge links: one row per friend tag,
+ * keeping their best distance, when it was set and the seed it came from.
+ */
+export class FriendsBoard {
+  constructor(store, key = 'friends') { this.store = store; this.key = key; this.entries = store.get(key, []); }
+  /** @returns {{tag:string, score:number, at:number, seed:number}[]} sorted desc */
+  top(n = 50) { return this.entries.slice(0, n); }
+  /** Record a friend's result; keeps only their best. Returns true if it is a new best for that tag. */
+  record(tag, score, seed, at = Date.now()) {
+    const i = this.entries.findIndex(e => e.tag === tag);
+    if (i >= 0 && this.entries[i].score >= score) return false;
+    if (i >= 0) this.entries.splice(i, 1);
+    this.entries.push({ tag, score, seed, at });
+    this.entries.sort((a, b) => b.score - a.score || a.at - b.at);
+    this.store.set(this.key, this.entries);
     return true;
   }
 }

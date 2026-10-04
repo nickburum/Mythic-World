@@ -30,6 +30,32 @@ A distance score makes every run "count": a casual player gets 30 m and a satisf
 - Sink: bubbles, plop, heavy haptic, then the result card rises after 0.9 s.
 - Night: crickets fade in, fireflies drift above the water, the sun becomes the moon.
 
+## A living sky
+
+`core/sky.js` places the sun and moon from the day phase: the sun arcs down and to the right and
+sets at phase 0.58; the moon rises on the left from 0.42. The dominant light drives everything:
+the sun path shimmer slides across the lake, cloud undersides brighten on the side facing the
+light, mountain slopes warm toward it, and every shadow (stone, lily pads, clouds) is cast by
+projecting the light through the object onto the water plane, so shadows swing and lengthen
+as the sun goes down. On the start screen the phase drifts with time so the attract-mode demo
+shows the whole day. Birds cross the sky while there's daylight; fireflies take over at night.
+
+## Mobile performance
+
+Sky + sun glow, water gradient and vignette are rasterised to offscreen canvases and rebuilt
+only when the day phase moves 0.4 %. Three quality tiers (`render/renderer.js` → `QUALITY`)
+trade DPR cap (2 / 1.5 / 1), star, cloud, water-line and firefly counts. Touch devices start on
+*medium*; in *Auto* the controller measures a 2 s rolling average frame time and steps down when
+frames exceed 24 ms. The loop pauses when the tab is hidden; HUD text only updates when its
+value changes.
+
+## Start screen & leaderboards
+
+Classic arcade start: logo, blinking TAP TO START, a vertical menu (Play, Leaderboard,
+Challenge a friend, How to play, Settings), HIGH SCORE with the player's 3-letter tag, and the
+game playing itself in attract mode behind it. The leaderboard is a full screen with LOCAL /
+FRIENDS / GLOBAL tabs; see `docs/GAMECENTER.md` for how friends and Game Center work.
+
 ## Leaderboards
 `src/platform/leaderboard.js`: local top‑10 everywhere; Game Center via a WKScriptMessageHandler in the iOS shell (`native/ios`). See `docs/GAMECENTER.md`.
 

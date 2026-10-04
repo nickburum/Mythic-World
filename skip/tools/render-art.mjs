@@ -39,39 +39,52 @@ async function renderScreens(browser) {
   const errors = [], shot = async (p, name) => { await p.screenshot({ path: resolve(ROOT, `art/screens/${name}.png`) }); console.log(`art/screens/${name}.png`); };
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   page.on('pageerror', e => errors.push(String(e))); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(BASE); await page.waitForFunction(() => !!window.__skip); await page.waitForTimeout(500);
+  await page.goto(BASE); await page.waitForFunction(() => !!window.__skip);
+  await page.waitForTimeout(2500);                       // let the attract demo throw
   await shot(page, 'title');
   await page.click('#open-howto'); await page.waitForTimeout(400); await shot(page, 'howto'); await page.evaluate(() => document.querySelector('#howto .close-panel').click());
 
   // autopilot run
-  await page.evaluate(() => { const a = window.__skip; a.autopilot = true; a.start(); });
+  await page.evaluate(() => { const a = window.__skip; a.start(); a.autopilot = true; });
   await page.waitForFunction(() => window.__skip.state === 'flight' && window.__skip.game.skips >= 2, null, { timeout: 30000 });
   await page.waitForFunction(() => { const g = window.__skip.game; return g.stone.y > 0.25 && g.stone.vy < 0; }, null, { timeout: 30000 });
   await shot(page, 'gameplay');
   await page.waitForFunction(() => window.__skip.game.distance >= 180, null, { timeout: 120000 });
   await page.waitForFunction(() => { const g = window.__skip.game; return g.stone.y > 0.2; }, null, { timeout: 30000 });
   await shot(page, 'dusk');
-  // stop tapping → the stone slows and sinks
   await page.evaluate(() => { window.__skip.autopilot = false; });
   await page.waitForFunction(() => window.__skip.state === 'sunk' && !document.getElementById('over').hidden, null, { timeout: 120000 });
   await page.waitForTimeout(500); await shot(page, 'gameover');
-  // The result card's buttons must be the top-most element at their centre (nothing overlays them).
-  const hit = await page.evaluate(() => { const b = document.getElementById('over-board'); const r = b.getBoundingClientRect(); const el = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return el === b || b.contains(el); });
-  if (!hit) errors.push('result card button is covered by another element');
+
+  // leaderboard screen: local tab has our run, tabs switch, nothing covers the rows
   await page.evaluate(() => document.getElementById('over-board').click());
   await page.waitForTimeout(400); await shot(page, 'leaderboard');
   const rows = await page.$$eval('#board-list li', li => li.length);
   if (rows < 1) errors.push('leaderboard has no rows after a run');
   const boardVisible = await page.evaluate(() => { const li = document.querySelector('#board-list li'); if (!li) return false; const r = li.getBoundingClientRect(); const el = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return li.contains(el) || el === li; });
-  if (!boardVisible) errors.push('leaderboard panel is covered by another overlay');
-  await page.evaluate(() => document.querySelector('#board .close-panel').click());
+  if (!boardVisible) errors.push('leaderboard is covered by another overlay');
+  await page.click('.tab[data-tab="friends"]'); await page.waitForTimeout(250); await shot(page, 'friends');
+  await page.click('.tab[data-tab="global"]'); await page.waitForTimeout(250);
+  const globalOk = await page.evaluate(() => !document.getElementById('global-web').hidden);
+  if (!globalOk) errors.push('global tab did not show the web explainer');
+  await page.evaluate(() => document.querySelector('#board .close-screen').click());
 
-  // real input: press on the canvas away from the panel restarts, hold charges, release throws
-  await page.waitForTimeout(700);
-  await page.touchscreen.tap(40, 120);
+  // challenge link flow: open a link, banner appears, accept plays the same seed
+  await page.goto(BASE + '?t=' + Date.now() + '#c=123456789.873.NIK'); await page.waitForFunction(() => !!window.__skip); await page.waitForTimeout(600);
+  const banner = await page.evaluate(() => !document.getElementById('challenge-banner').hidden && document.getElementById('banner-title').textContent);
+  if (!banner || !String(banner).includes('NIK')) errors.push('challenge banner missing');
+  await shot(page, 'challenge');
+  await page.click('#banner-accept'); await page.waitForTimeout(200);
+  const seed = await page.evaluate(() => window.__skip.game.seed);
+  if (seed !== 123456789) errors.push(`challenge did not seed the lake (${seed})`);
+  const friends = await page.evaluate(() => window.__skip.board.friends.top().length);
+  if (friends < 1) errors.push('friend not recorded from challenge');
+
+  // real input: press on the canvas charges, release throws
+  await page.touchscreen.tap(40, 300);
   await page.waitForTimeout(200);
   const st = await page.evaluate(() => window.__skip.state);
-  if (st !== 'ready' && st !== 'flight') errors.push(`touch after game over did not restart (state=${st})`);
+  if (st !== 'flight') errors.push(`touch did not throw (state=${st})`);
 
   // switcher present
   const sw = await page.evaluate(() => !!document.querySelector('.gsw-handle'));

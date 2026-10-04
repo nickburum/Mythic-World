@@ -5,15 +5,24 @@
  * Drive it with `update(dt, holding)` while ready and `tap()` in flight.
  */
 import { CONFIG } from './config.js';
+import { seededRandom } from './challenge.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export class SkipGame {
-  /** @param {{ config?: Partial<typeof CONFIG>, random?: () => number }} [opts] */
+  /** @param {{ config?: Partial<typeof CONFIG>, random?: () => number, seed?: number }} [opts] */
   constructor(opts = {}) {
     this.config = { ...CONFIG, ...(opts.config || {}) };
-    this.random = opts.random || Math.random;
+    this.seed = opts.seed ?? null;
+    this.random = opts.random || (this.seed !== null ? seededRandom(this.seed) : Math.random);
     this.listeners = {};
+    this.reset();
+  }
+
+  /** Start over on a specific seeded lake (same motes and pads for everyone with the seed). */
+  resetWithSeed(seed) {
+    this.seed = seed >>> 0;
+    this.random = seededRandom(this.seed);
     this.reset();
   }
 

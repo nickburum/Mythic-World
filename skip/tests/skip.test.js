@@ -174,3 +174,75 @@ test('local leaderboard keeps a sorted top 10 and reports rank', () => {
   assert.equal(board.rankOf(10), null);
   assert.equal(board.best(), 150);
 });
+
+// ───────────── sky, shadows, challenges, friends ─────────────
+import { sky, shadowX, SUNSET, MOONRISE } from '../src/core/sky.js';
+import { encodeChallenge, decodeChallenge, challengeUrl, challengeFromUrl, cleanTag, seededRandom } from '../src/core/challenge.js';
+import { FriendsBoard } from '../src/platform/leaderboard.js';
+
+test('the sun descends and drifts right until sunset; the moon rises after', () => {
+  let prevAlt = Infinity, prevX = -1;
+  for (let p = 0; p < SUNSET; p += 0.05) {
+    const s = sky(p);
+    assert.ok(s.sun.alt <= prevAlt, 'sun keeps descending');
+    assert.ok(s.sun.x >= prevX, 'sun keeps moving right');
+    assert.equal(s.light.x, s.sun.x, 'the sun is the light while up');
+    prevAlt = s.sun.alt; prevX = s.sun.x;
+  }
+  assert.ok(sky(SUNSET).sun.alt < 0.01);
+  assert.ok(!sky(MOONRISE - 0.1).moon.visible);
+  assert.ok(sky(1).moon.visible && sky(1).moon.alt > 0.8);
+  assert.equal(sky(1).light.x, sky(1).moon.x, 'the moon lights the night');
+  assert.ok(sky(1).light.strength < sky(0).light.strength, 'moonlight is dimmer');
+});
+
+test('shadows fall away from the light and lengthen as it sets', () => {
+  const waterY = 500;
+  assert.equal(shadowX(100, 0, 100, 400, waterY), 100, 'light overhead → shadow under the point');
+  const high = shadowX(300, 50, 100, 400, waterY);
+  const low = shadowX(300, 300, 100, 400, waterY);
+  assert.ok(high < 100 && low < 100, 'shadow is on the far side from the light');
+  assert.ok(low < high, 'lower light → longer shadow');
+  assert.equal(shadowX(300, 450, 100, 400, waterY), null, 'light below the point casts nothing on the water');
+  assert.equal(shadowX(300, 50, 100, 500, waterY), 100, 'a point on the water shadows itself');
+});
+
+test('challenge links round-trip and reject garbage', () => {
+  const c = { seed: 123456789, score: 87.3, tag: 'nik' };
+  const enc = encodeChallenge(c);
+  assert.equal(enc, '123456789.873.NIK');
+  assert.deepEqual(decodeChallenge(enc), { seed: 123456789, score: 87.3, tag: 'NIK' });
+  const withReply = encodeChallenge({ ...c, reply: { score: 91, tag: 'sam' } });
+  assert.deepEqual(decodeChallenge(withReply).reply, { score: 91, tag: 'SAM' });
+  assert.equal(decodeChallenge('nope'), null);
+  assert.equal(decodeChallenge('1.2'), null);
+  assert.equal(decodeChallenge('-1.20.ABC'), null);
+  assert.equal(decodeChallenge(''), null);
+  const url = challengeUrl('https://example.com/skip/?x=1', c);
+  assert.deepEqual(challengeFromUrl(url), { seed: 123456789, score: 87.3, tag: 'NIK' });
+  assert.equal(challengeFromUrl('https://example.com/skip/'), null);
+  assert.equal(cleanTag('a-b!c'), 'ABC');
+  assert.equal(cleanTag(''), 'YOU');
+});
+
+test('the same seed produces the same lake', () => {
+  const a = new SkipGame({ seed: 42 }), b = new SkipGame({ seed: 42 }), c = new SkipGame({ seed: 43 });
+  assert.deepEqual(a.motes.map(m => m.x), b.motes.map(m => m.x));
+  assert.notDeepEqual(a.motes.map(m => m.x), c.motes.map(m => m.x));
+  a.resetWithSeed(7); b.resetWithSeed(7);
+  assert.deepEqual(a.motes.map(m => m.x), b.motes.map(m => m.x));
+  const r1 = seededRandom(5), r2 = seededRandom(5);
+  assert.equal(r1(), r2());
+});
+
+test('friends board keeps one best row per tag, sorted', () => {
+  const store = new Map();
+  const mem = { get: (k, d) => store.has(k) ? store.get(k) : d, set: (k, v) => store.set(k, v) };
+  const fb = new FriendsBoard(mem);
+  assert.ok(fb.record('SAM', 50, 1, 10));
+  assert.ok(fb.record('AMY', 80, 2, 11));
+  assert.ok(!fb.record('SAM', 40, 3, 12), 'a worse run does not replace a best');
+  assert.ok(fb.record('SAM', 90, 4, 13));
+  assert.deepEqual(fb.top().map(e => [e.tag, e.score]), [['SAM', 90], ['AMY', 80]]);
+  assert.equal(new FriendsBoard(mem).top().length, 2, 'persists through the store');
+});

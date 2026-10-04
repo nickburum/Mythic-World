@@ -3,7 +3,7 @@
 // JS → native (window.webkit.messageHandlers.gameCenter.postMessage):
 //   { type: "authenticate" }
 //   { type: "submit", leaderboardID: String, score: Int }   // score = metres × 10
-//   { type: "show",   leaderboardID: String }
+//   { type: "show",   leaderboardID: String, scope?: "global" | "friends" }
 // native → JS:
 //   window.GameCenterBridge.onAuth({ authenticated: Bool, alias: String })
 //   window.GameCenterBridge.onSubmitted({ ok: Bool, error: String })
@@ -24,7 +24,10 @@ final class GameCenterBridge: NSObject, WKScriptMessageHandler, GKGameCenterCont
         case "submit":
             if let score = body["score"] as? Int, let id = body["leaderboardID"] as? String { submit(score: score, to: id) }
         case "show":
-            if let id = body["leaderboardID"] as? String { showLeaderboard(id) }
+            if let id = body["leaderboardID"] as? String {
+                let friends = (body["scope"] as? String) == "friends"
+                showLeaderboard(id, friendsOnly: friends)
+            }
         default:
             break
         }
@@ -54,8 +57,8 @@ final class GameCenterBridge: NSObject, WKScriptMessageHandler, GKGameCenterCont
         }
     }
 
-    private func showLeaderboard(_ leaderboardID: String) {
-        let vc = GKGameCenterViewController(leaderboardID: leaderboardID, playerScope: .global, timeScope: .allTime)
+    private func showLeaderboard(_ leaderboardID: String, friendsOnly: Bool = false) {
+        let vc = GKGameCenterViewController(leaderboardID: leaderboardID, playerScope: friendsOnly ? .friendsOnly : .global, timeScope: .allTime)
         vc.gameCenterDelegate = self
         presenter?.present(vc, animated: true)
     }

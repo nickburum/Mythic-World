@@ -1,5 +1,5 @@
 /* Sky Temple — offline cache. Bump VERSION whenever shipped files change. */
-const VERSION = 'skytemple-v3';
+const VERSION = 'skytemple-v4';
 const ASSETS = [
   './',
   './index.html',
