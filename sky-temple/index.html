@@ -17,13 +17,14 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="art/icon.svg" />
   <link rel="apple-touch-icon" href="art/icon-180.png" />
+  <link rel="stylesheet" href="../css/game-ui.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body data-state="title">
   <canvas id="game" aria-label="Sky Temple game"></canvas>
 
   <!-- Title -->
-  <section id="title" class="overlay" data-ui>
+  <section id="title" class="overlay menu" data-ui>
     <div class="title-block">
       <div class="eyebrow">✦ one tap · infinite climb ✦</div>
       <h1 class="logo"><span>SKY</span><span>TEMPLE</span></h1>
@@ -39,7 +40,7 @@
   </section>
 
   <!-- Game over -->
-  <section id="over" class="overlay" data-ui hidden>
+  <section id="over" class="overlay menu" data-ui hidden>
     <div class="panel">
       <div id="new-best" class="new-best" hidden>✦ NEW BEST ✦</div>
       <div class="label">SCORE</div>
@@ -54,7 +55,7 @@
     </div>
   </section>
 
-  <button id="mute" class="icon-btn" type="button" data-ui aria-label="Mute">🔊</button>
+  <button id="mute" class="icon-btn corner-btn" type="button" data-ui aria-label="Mute">🔊</button>
 
   <script type="module" src="src/main.js"></script>
   <script src="../switcher.js" data-game="sky-temple"></script>

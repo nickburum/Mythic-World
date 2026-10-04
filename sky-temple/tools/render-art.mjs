@@ -21,13 +21,14 @@ function loadPlaywright() {
 }
 const { chromium } = loadPlaywright();
 
-const ROOT = resolve(import.meta.dirname, '..');
+const ROOT = resolve(import.meta.dirname, '..');            // sky-temple/
+const REPO = resolve(ROOT, '..');
 const PORT = 8099;
-const BASE = `http://127.0.0.1:${PORT}/`;
+const BASE = `http://127.0.0.1:${PORT}/sky-temple/`;
 const wantScreens = process.argv.includes('--screens');
 
 async function startServer() {
-  const proc = spawn('npx', ['http-server', ROOT, '-p', String(PORT), '-s', '-c-1'], { stdio: 'ignore' });
+  const proc = spawn('npx', ['http-server', REPO, '-p', String(PORT), '-s', '-c-1'], { stdio: 'ignore' });
   for (let i = 0; i < 50; i++) {
     try { const r = await fetch(BASE); if (r.ok) return proc; } catch {}
     await new Promise(r => setTimeout(r, 200));

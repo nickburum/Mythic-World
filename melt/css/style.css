@@ -1,0 +1,58 @@
+/* MELT — UI chrome. The game itself is drawn on the canvas. */
+:root {
+  --ink: #fff;
+  --ink-dim: rgba(255, 255, 255, 0.72);
+  --shadow: 0 2px 0 rgba(0, 0, 0, 0.25), 0 10px 30px rgba(0, 0, 0, 0.25);
+  --font: ui-rounded, -apple-system, "SF Pro Rounded", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ice: #9fe3ff;
+  --water: #3aa7ff;
+  --steam: #f4f7ff;
+}
+html, body { background: #1b2a44; }
+
+
+/* ─── title ─── */
+#title { justify-content: space-between; }
+.title-block { margin-top: 6vh; }
+.eyebrow { font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px; }
+.logo {
+  margin: 0; line-height: 0.9; font-weight: 900; font-size: clamp(84px, 26vw, 140px); letter-spacing: 0.04em;
+  background: linear-gradient(180deg, var(--ice) 0%, #fff 45%, #ffb36b 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.18)) drop-shadow(0 12px 32px rgba(0, 0, 0, 0.3));
+}
+.tagline { margin: 16px auto 0; max-width: 320px; font-size: 16px; line-height: 1.4; color: var(--ink-dim); }
+.legend { display: flex; gap: 14px; justify-content: center; margin-top: 22px; }
+.leg { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; letter-spacing: 0.16em; font-weight: 800; }
+.leg small { font-size: 10px; letter-spacing: 0.02em; font-weight: 500; color: var(--ink-dim); text-transform: none; }
+.chip { width: 26px; height: 26px; border-radius: 8px; display: block; box-shadow: 0 3px 0 rgba(0,0,0,0.2); }
+.chip.ice { background: var(--ice); border-radius: 6px; }
+.chip.water { background: var(--water); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; }
+.chip.steam { background: var(--steam); border-radius: 50%; opacity: 0.9; }
+.tap-hint { font-weight: 800; font-size: 18px; letter-spacing: 0.18em; animation: pulse 1.4s ease-in-out infinite; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+.finger { display: inline-block; animation: bob 1.4s ease-in-out infinite; margin-right: 6px; }
+.title-best { font-size: 14px; letter-spacing: 0.2em; color: var(--ink-dim); }
+.title-best strong { color: var(--ink); font-size: 18px; margin-left: 6px; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.65; transform: scale(0.97); } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* ─── hud ─── */
+#hud { justify-content: flex-start; }
+.score {
+  margin-top: 3vh; font-size: clamp(64px, 20vw, 110px); font-weight: 900; line-height: 1;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.18), 0 10px 30px rgba(0, 0, 0, 0.25); transform-origin: center; will-change: transform;
+}
+
+/* ─── game over (layout from the kit) ─── */
+.death-line { min-height: 18px; font-size: 14px; font-weight: 700; }
+.stat .label { margin-bottom: 2px; }
+
+/* ─── mute ─── */
+
+@media (min-aspect-ratio: 1/1) {
+  .title-block { margin-top: 1vh; }
+  .logo { font-size: 96px; }
+  .score { margin-top: 1vh; font-size: 64px; }
+}

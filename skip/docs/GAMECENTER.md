@@ -2,7 +2,7 @@
 
 SKIP's leaderboard code has two backends. On the web it keeps a local top‑10 and
 shows "Local scores" on the title screen. Inside the iOS shell in
-`native/ios`, the same code talks to Game Center: the chip turns green with the
+`ios/GameBox` (repo root), the same code talks to Game Center: the chip turns green with the
 player's alias, every run is submitted, and the LEADERBOARD panel gains an
 **OPEN GAME CENTER** button that presents Apple's leaderboard sheet.
 
@@ -11,7 +11,7 @@ player's alias, every run is submitted, and the LEADERBOARD panel gains an
 1. Xcode → **File ▸ New ▸ Project ▸ iOS App**. Interface: SwiftUI. Name it `SKIP`.
    Bundle identifier e.g. `com.yourname.skip`.
 2. Delete the generated `ContentView.swift` and `SKIPApp.swift`. Drag
-   `skip/native/ios/*.swift` into the target (copy items).
+   `ios/GameBox/*.swift` into the target (copy items).
 3. Add the game: drag the `skip/` folder into the project and choose
    **Create folder references** (blue folder). Rename the reference to `web`.
    You can exclude `tools/`, `tests/`, `docs/` and `native/` from the copy.

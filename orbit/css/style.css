@@ -1,0 +1,3 @@
+html, body { background: #0a0f22; }
+.logo { background: linear-gradient(180deg, #fff 0%, #d9fbff 50%, #7df0ff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { font-size: 13px; letter-spacing: .28em; color: var(--ink-dim); margin-top: 4px; }

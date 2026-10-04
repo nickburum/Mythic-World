@@ -1,23 +1,13 @@
-/* MELT — offline cache. Bump VERSION whenever shipped files change. */
-const VERSION = 'melt-v4';
-const ASSETS = [
-  './', './index.html', './css/style.css', './manifest.webmanifest', './switcher.js',
-  './src/main.js', './src/core/config.js', './src/core/melt.js', './src/core/palette.js',
-  './src/render/renderer.js', './src/render/effects.js', './src/audio/sfx.js',
-  './src/platform/storage.js', './src/platform/haptics.js', './src/platform/input.js',
-  './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png',
-];
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
-});
-self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
-});
+/* Game Box hub — offline cache for the launcher. Each game keeps its own worker in its folder. */
+const VERSION = 'gamebox-v1';
+const ASSETS = ['./', './index.html', './css/box.css', './src/box.js', './src/games.js', './manifest.webmanifest', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png',
+  './melt/art/icon-192.png', './skip/art/icon-192.png', './pop/art/icon-192.png', './orbit/art/icon-192.png', './sky-temple/art/icon-192.png'];
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS).catch(() => {})).then(() => self.skipWaiting())); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('gamebox-') && k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
-    const copy = res.clone();
-    caches.open(VERSION).then((c) => c.put(e.request, copy)).catch(() => {});
-    return res;
-  }).catch(() => hit)));
+  const url = new URL(e.request.url);
+  // only handle the hub's own files; games are served by their own workers
+  if (/\/(melt|skip|pop|orbit|sky-temple)\//.test(url.pathname) && !url.pathname.endsWith('icon-192.png')) return;
+  e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)).catch(() => {}); return res; }).catch(() => hit)));
 });

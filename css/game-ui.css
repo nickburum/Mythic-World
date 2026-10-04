@@ -1,0 +1,75 @@
+/*
+ * Game Box — shared mobile UI kit for every game's chrome.
+ * Thumb-first: primary actions live in a bottom sheet, buttons are ≥52px tall,
+ * everything respects safe areas, and layouts tighten on short phones.
+ * Each game layers its own small stylesheet on top (colours, HUD extras).
+ */
+:root {
+  --ink: #fff; --ink-dim: rgba(255,255,255,.72); --glass: rgba(16,24,48,.5); --glass-edge: rgba(255,255,255,.2);
+  --font: ui-rounded, -apple-system, "SF Pro Rounded", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; color: var(--ink); font-family: var(--font); -webkit-user-select: none; user-select: none; touch-action: none; overscroll-behavior: none; }
+#game { position: fixed; inset: 0; display: block; touch-action: none; }
+button { font: inherit; color: inherit; }
+
+.overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(var(--safe-top) + 16px) calc(var(--safe-right) + 20px) calc(var(--safe-bottom) + 20px) calc(var(--safe-left) + 20px); text-align: center; pointer-events: none; }
+.overlay[hidden] { display: none; }
+.menu > * { pointer-events: auto; }
+.menu { animation: fade .3s ease; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* title: logo up top, actions at the thumb */
+#title { justify-content: space-between; }
+.title-block { margin-top: 6vh; }
+.eyebrow { font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 8px; }
+.logo { margin: 0; line-height: .9; font-weight: 900; font-size: clamp(76px, 24vw, 132px); letter-spacing: .05em; filter: drop-shadow(0 4px 0 rgba(0,0,0,.18)) drop-shadow(0 14px 34px rgba(0,0,0,.35)); }
+.tagline { margin: 12px auto 0; max-width: 300px; font-size: 15px; line-height: 1.4; color: var(--ink-dim); }
+.sheet-ish { width: min(100%, 420px); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.title-best { font-size: 13px; letter-spacing: .2em; color: var(--ink-dim); }
+.title-best strong { color: var(--ink); font-size: 18px; margin-left: 6px; }
+
+/* inside the Game Box a back pill sits top-left: give the title room */
+.in-box .title-block { margin-top: 11vh; }
+.in-box #hud .hud-top { margin-top: 6vh; }
+
+/* HUD */
+#hud { justify-content: flex-start; }
+.hud-top { margin-top: 2vh; display: flex; flex-direction: column; align-items: center; }
+.score { font-size: clamp(56px, 18vw, 96px); font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(0,0,0,.18), 0 10px 30px rgba(0,0,0,.3); }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; padding: 14px 18px; border: 0; border-radius: 999px; font-weight: 900; font-size: 15px; letter-spacing: .14em; cursor: pointer; transition: transform .08s ease, background .2s; }
+.btn:active { transform: scale(.97); }
+.btn.big { min-height: 60px; font-size: 19px; }
+.btn.primary { background: #fff; color: #1b2a44; box-shadow: 0 6px 0 rgba(0,0,0,.2), 0 14px 30px rgba(0,0,0,.25); }
+.btn.ghost { background: rgba(255,255,255,.12); color: #fff; border: 1px solid var(--glass-edge); }
+.btn[hidden] { display: none; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--glass-edge); background: var(--glass); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+.icon-btn:active { transform: scale(.94); }
+.corner-btn { position: fixed; top: calc(var(--safe-top) + 12px); right: calc(var(--safe-right) + 12px); z-index: 10; }
+body[data-state="play"] .corner-btn, body[data-state="flight"] .corner-btn, body[data-state="ready"] .corner-btn, body[data-state="playing"] .corner-btn { opacity: .5; }
+
+/* result / dialogs: a bottom sheet on phones, a centred card on wide screens */
+.menu .panel { pointer-events: auto; display: flex; flex-direction: column; gap: 10px; width: min(100%, 520px); max-height: calc(100dvh - var(--safe-top) - 24px); overflow: auto; padding: 14px 20px calc(var(--safe-bottom) + 16px); border-radius: 28px 28px 0 0; background: var(--glass); border: 1px solid var(--glass-edge); border-bottom: 0;
+  box-shadow: 0 -20px 60px rgba(0,0,0,.45); backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); animation: up .4s cubic-bezier(.2,.9,.2,1.1); }
+.menu .panel::before { content: ""; width: 44px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.3); margin: 0 auto 4px; }
+#over { justify-content: flex-end; padding-left: 0; padding-right: 0; padding-bottom: 0; background: rgba(0,0,0,.25); }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.label { font-size: 12px; letter-spacing: .28em; color: var(--ink-dim); }
+.big { font-size: 68px; font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(0,0,0,.18); }
+.mid { font-size: 28px; font-weight: 800; line-height: 1.1; }
+.row { display: flex; justify-content: center; gap: 28px; }
+.new-best { align-self: center; padding: 6px 14px; border-radius: 999px; background: hsl(45 100% 60%); color: #4a2d00; font-weight: 900; font-size: 13px; letter-spacing: .14em; animation: pulse 1s ease-in-out infinite; }
+.new-best[hidden] { display: none; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+.hint { font-size: 12px; letter-spacing: .1em; color: var(--ink-dim); }
+
+@media (min-width: 640px) and (min-height: 600px) {
+  #over { justify-content: center; padding: 20px; }
+  .menu .panel { border-radius: 28px; border-bottom: 1px solid var(--glass-edge); padding: 22px 22px 20px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  .menu .panel::before { display: none; }
+}
+@media (max-height: 700px) { .title-block { margin-top: 2vh; } .logo { font-size: clamp(60px, 18vw, 96px); } .tagline { margin-top: 6px; font-size: 14px; } .score { font-size: 56px; } .big { font-size: 56px; } }
+@media (prefers-reduced-motion: reduce) { .menu, .menu .panel, .new-best { animation: none; } }

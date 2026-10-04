@@ -1,0 +1,5 @@
+const VERSION = 'pop-v1';
+const ASSETS = ['./', './index.html', './css/style.css', '../css/game-ui.css', '../switcher.js', './src/main.js', './src/core/pop.js', './src/render/renderer.js', './src/render/effects.js', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png'];
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((k) => Promise.all(k.filter((x) => x.startsWith('pop-') && x !== VERSION).map((x) => caches.delete(x)))).then(() => self.clients.claim())); });
+self.addEventListener('fetch', (e) => { if (e.request.method !== 'GET') return; e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)).catch(() => {}); return res; }).catch(() => hit))); });

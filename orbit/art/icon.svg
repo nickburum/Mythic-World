@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs><radialGradient id="bg" cx=".5" cy=".5" r=".75"><stop offset="0" stop-color="hsl(232 45% 20%)"/><stop offset="1" stop-color="#05070f"/></radialGradient>
+  <radialGradient id="star" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="rgba(185,140,255,.6)"/><stop offset="1" stop-color="rgba(185,140,255,0)"/></radialGradient>
+  <radialGradient id="comet" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="rgba(125,240,255,.7)"/><stop offset="1" stop-color="rgba(125,240,255,0)"/></radialGradient></defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="110" fill="url(#star)"/>
+  <circle cx="512" cy="512" r="330" fill="none" stroke="rgba(125,240,255,.25)" stroke-width="22"/>
+  <circle cx="512" cy="512" r="330" fill="none" stroke="rgba(125,240,255,.8)" stroke-width="5"/>
+  <path d="M 827.2610414114499 609.5216681982421 A 330 330 0 0 1 661.6867200704405 806.0984288202737" fill="none" stroke="#ff5a6e" stroke-width="54" stroke-linecap="round"/>
+  <path d="M 229.2267113882474 341.8845472989168 A 330 330 0 0 0 568.0891571570795 186.80158910380817" fill="none" stroke="rgba(125,240,255,.55)" stroke-width="40" stroke-linecap="round"/>
+  <circle cx="568.0891571570795" cy="186.80158910380817" r="95" fill="url(#comet)"/>
+  <circle cx="568.0891571570795" cy="186.80158910380817" r="30" fill="#fff"/>
+  <g transform="translate(317.7946313057359 778.8038132604647) rotate(20)"><path d="M0 -42 L30 0 L0 42 L-30 0 Z" fill="#ffe66b"/><path d="M0 -20 L14 0 L0 20 L-14 0 Z" fill="#fff8d0"/></g>
+</svg>

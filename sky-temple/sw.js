@@ -1,11 +1,11 @@
 /* Sky Temple — offline cache. Bump VERSION whenever shipped files change. */
-const VERSION = 'skytemple-v4';
+const VERSION = 'skytemple-v5';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
   './manifest.webmanifest',
-  '../switcher.js',
+  '../switcher.js', '../css/game-ui.css',
   '../art/icon-192.png',
   './src/main.js',
   './src/core/config.js',

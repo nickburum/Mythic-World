@@ -1,0 +1,54 @@
+# Game Box — XcodeGen spec. `bash ios/bootstrap.sh` generates GameBox.xcodeproj from this.
+# Change bundleIdPrefix / DEVELOPMENT_TEAM to yours (or pick the team in Xcode ▸ Signing).
+name: GameBox
+options:
+  bundleIdPrefix: com.nickburum
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  xcodeVersion: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""            # ← your Team ID (Apple Developer ▸ Membership), or set in Xcode
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: "1"     # iPhone only; use "1,2" to add iPad
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  GameBox:
+    type: application
+    platform: iOS
+    sources:
+      - path: GameBox
+        excludes: ["web/**"]
+      - path: GameBox/web
+        type: folder             # blue folder reference: the whole web build ships as-is
+        buildPhase: resources
+    entitlements:
+      path: GameBox/GameBox.entitlements
+      properties:
+        com.apple.developer.game-center: true
+    info:
+      path: GameBox/Info.plist
+      properties:
+        CFBundleDisplayName: Game Box
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIRequiredDeviceCapabilities: [arm64]
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.games
+        CFBundleURLTypes:
+          - CFBundleURLName: com.nickburum.gamebox
+            CFBundleURLSchemes: [gamebox]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nickburum.gamebox
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: NO

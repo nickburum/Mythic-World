@@ -57,7 +57,7 @@ game playing itself in attract mode behind it. The leaderboard is a full screen 
 FRIENDS / GLOBAL tabs; see `docs/GAMECENTER.md` for how friends and Game Center work.
 
 ## Leaderboards
-`src/platform/leaderboard.js`: local top‑10 everywhere; Game Center via a WKScriptMessageHandler in the iOS shell (`native/ios`). See `docs/GAMECENTER.md`.
+`src/platform/leaderboard.js`: local top‑10 everywhere; Game Center via a WKScriptMessageHandler in the iOS shell (`ios/GameBox` (repo root)). See `docs/GAMECENTER.md`.
 
 ## Store copy
 **Title:** SKIP — Stone Skipping

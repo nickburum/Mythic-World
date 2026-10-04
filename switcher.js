@@ -11,10 +11,16 @@
   const current = (script && script.dataset.game) || '';
   const base = new URL('.', script ? script.src : location.href).href;
 
+  // Inside the Game Box the hub owns navigation: mark the page and stay out of the way.
+  if (window.parent !== window) { document.documentElement.classList.add('in-box'); return; }
+
   const GAMES = [
-    { id: 'melt', name: 'MELT', tag: 'Hold to heat, release to cool', href: base, icon: base + 'art/icon-192.png', hue: '#3aa7ff' },
+    { id: 'melt', name: 'MELT', tag: 'Hold to heat, release to cool', href: base + 'melt/', icon: base + 'melt/art/icon-192.png', hue: '#3aa7ff' },
     { id: 'skip', name: 'SKIP', tag: 'Skip a stone across a sunset lake', href: base + 'skip/', icon: base + 'skip/art/icon-192.png', hue: '#ffb36b' },
+    { id: 'pop', name: 'POP', tag: 'Pop the bubbles that match', href: base + 'pop/', icon: base + 'pop/art/icon-192.png', hue: '#ff7ab6' },
+    { id: 'orbit', name: 'ORBIT', tag: 'Tap to reverse, dodge, collect', href: base + 'orbit/', icon: base + 'orbit/art/icon-192.png', hue: '#7df0ff' },
     { id: 'sky-temple', name: 'Sky Temple', tag: 'Tap to stack to the gods', href: base + 'sky-temple/', icon: base + 'sky-temple/art/icon-192.png', hue: '#ff9a5b' },
+    { id: 'box', name: 'Game Box', tag: 'Back to all games', href: base, icon: base + 'art/icon-192.png', hue: '#ffffff' },
   ];
 
   const css = `

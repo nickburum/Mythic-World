@@ -3,66 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>MELT</title>
-  <meta name="description" content="Hold to heat, release to cool. Be ice, water or steam at the right moment in this one-finger hyper-casual runner." />
-  <meta name="theme-color" content="#1b2a44" />
+  <title>Game Box</title>
+  <meta name="description" content="Five tiny games in one box. Pick one and play." />
+  <meta name="theme-color" content="#0f1628" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="MELT" />
-  <meta property="og:title" content="MELT" />
-  <meta property="og:description" content="Hold to heat. Release to cool. Be the right state of matter." />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="art/screens/gameplay.png" />
+  <meta name="apple-mobile-web-app-title" content="Game Box" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="art/icon.svg" />
   <link rel="apple-touch-icon" href="art/icon-180.png" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/box.css" />
 </head>
-<body data-state="title">
-  <canvas id="game" aria-label="MELT game"></canvas>
+<body data-view="home">
+  <div class="bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 
-  <!-- Title -->
-  <section id="title" class="overlay" data-ui>
-    <div class="title-block">
-      <div class="eyebrow">✦ one finger · three states ✦</div>
-      <h1 class="logo">MELT</h1>
-      <p class="tagline">Hold to heat. Release to cool.<br>Be the right state of matter.</p>
-      <div class="legend">
-        <div class="leg"><span class="chip ice"></span>ICE<small>smashes glass</small></div>
-        <div class="leg"><span class="chip water"></span>WATER<small>flows through pipes</small></div>
-        <div class="leg"><span class="chip steam"></span>STEAM<small>floats over spikes</small></div>
-      </div>
+  <!-- ─── Home ─── -->
+  <main id="home" class="home">
+    <header class="top">
+      <div class="brand"><span class="brand-mark">▣</span><h1>GAME BOX</h1></div>
+      <button id="open-settings" class="icon-btn" type="button" aria-label="Settings">⚙︎</button>
+    </header>
+
+    <section id="hero" class="hero" hidden>
+      <button id="hero-btn" class="hero-card" type="button">
+        <img id="hero-icon" class="hero-icon" alt="" />
+        <div class="hero-text">
+          <small>JUMP BACK IN</small>
+          <b id="hero-name">SKIP</b>
+          <span id="hero-best" class="chip">best —</span>
+        </div>
+        <span class="hero-play">▶</span>
+      </button>
+    </section>
+
+    <section class="grid-wrap">
+      <h2 class="section-title">ALL GAMES</h2>
+      <div id="grid" class="grid" role="list"></div>
+    </section>
+
+    <footer class="foot">
+      <span>Five games · one finger · no downloads</span>
+    </footer>
+  </main>
+
+  <!-- ─── Player (a game running inside the box) ─── -->
+  <section id="player" class="player" hidden>
+    <iframe id="frame" class="frame" title="Game" allow="autoplay; vibrate" src="about:blank"></iframe>
+    <button id="back" class="back-pill" type="button" aria-label="Back to games"><span class="chev">‹</span><span id="back-label">Games</span></button>
+    <div id="loading" class="loading"><div class="spinner"></div></div>
+  </section>
+
+  <!-- ─── Settings sheet ─── -->
+  <section id="settings" class="sheet-wrap" hidden>
+    <div class="scrim" data-close></div>
+    <div class="sheet">
+      <div class="grabber"></div>
+      <h2>SETTINGS</h2>
+      <label class="toggle"><span>Sound</span><input id="opt-sound" type="checkbox" checked /><i></i></label>
+      <label class="toggle"><span>Haptics</span><input id="opt-haptics" type="checkbox" checked /><i></i></label>
+      <label class="field"><span>Graphics</span>
+        <select id="opt-quality" class="select"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+      </label>
+      <p class="note">Settings apply to every game in the box.</p>
+      <button id="reset-scores" class="btn danger" type="button">RESET ALL SCORES</button>
+      <button class="btn primary" type="button" data-close>DONE</button>
     </div>
-    <div class="tap-hint" aria-hidden="true"><span class="finger">👆</span> HOLD TO PLAY</div>
-    <div class="title-best">BEST <strong id="best">0</strong></div>
   </section>
 
-  <!-- HUD -->
-  <section id="hud" class="overlay no-block" hidden>
-    <div id="score" class="score">0</div>
-  </section>
-
-  <!-- Game over -->
-  <section id="over" class="overlay" data-ui hidden>
-    <div class="panel">
-      <div id="new-best" class="new-best" hidden>✦ NEW BEST ✦</div>
-      <div id="death-line" class="death-line"></div>
-      <div class="label">SCORE</div>
-      <div id="over-score" class="big">0</div>
-      <div class="row">
-        <div class="stat"><div class="label">BEST</div><div id="over-best" class="mid">0</div></div>
-        <div class="stat"><div class="label">CLOSE CALLS</div><div id="over-close" class="mid">0</div></div>
-      </div>
-      <button id="retry" class="btn primary" type="button">PLAY AGAIN</button>
-      <button id="share" class="btn ghost" type="button">SHARE</button>
-      <div class="hint">or hold anywhere</div>
-    </div>
-  </section>
-
-  <button id="mute" class="icon-btn" type="button" data-ui aria-label="Mute">🔊</button>
-
-  <script type="module" src="src/main.js"></script>
-  <script src="switcher.js" data-game="melt"></script>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="src/box.js"></script>
 </body>
 </html>

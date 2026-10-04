@@ -1,14 +1,17 @@
 {
-  "name": "melt",
-  "version": "1.0.0",
-  "description": "MELT — hold to heat, release to cool. A hyper-casual runner where your state of matter is the only control.",
+  "name": "game-box",
+  "version": "2.0.0",
+  "description": "Game Box — five tiny hyper-casual games in one box. Pure web, no dependencies, ships to iOS via the ios/ shell.",
   "type": "module",
   "private": true,
   "scripts": {
     "start": "npx http-server . -p 8080 -c-1",
-    "test": "node --test tests/*.test.js && npm --prefix skip test && npm --prefix sky-temple test",
-    "icons": "node tools/make-icon.mjs && node tools/render-art.mjs",
-    "screens": "node tools/render-art.mjs --screens"
+    "test": "node --test tests/*.test.js && npm --prefix melt test && npm --prefix skip test && npm --prefix pop test && npm --prefix orbit test && npm --prefix sky-temple test",
+    "icons": "node tools/make-icon.mjs && node tools/render-hub.mjs",
+    "screens": "node tools/render-hub.mjs --screens",
+    "screens:all": "npm run screens && npm --prefix melt run screens && npm --prefix skip run screens && npm --prefix pop run screens && npm --prefix orbit run screens && npm --prefix sky-temple run screens",
+    "build:web": "bash scripts/build-web.sh",
+    "ios": "bash ios/bootstrap.sh"
   },
   "license": "MIT"
 }
