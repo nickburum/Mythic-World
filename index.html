@@ -16,41 +16,46 @@
   <link rel="stylesheet" href="css/box.css" />
 </head>
 <body data-view="home">
-  <div class="bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+  <div class="bg" aria-hidden="true"></div>
 
   <!-- ─── Home ─── -->
   <main id="home" class="home">
     <header class="top">
-      <div class="brand"><span class="brand-mark">▣</span><h1>GAME BOX</h1></div>
-      <button id="open-settings" class="icon-btn" type="button" aria-label="Settings">⚙︎</button>
+      <button id="toggle-sound" class="icon-btn" type="button" aria-label="Sound">
+        <svg id="sound-on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+        <svg id="sound-off" viewBox="0 0 24 24" hidden><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>
+      </button>
+      <div class="brand"><h1>GAME BOX</h1><small>Five games</small></div>
+      <button id="open-settings" class="icon-btn" type="button" aria-label="Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
     </header>
 
-    <section id="hero" class="hero" hidden>
+    <section id="hero" class="hero">
+      <h2 class="section-title" id="hero-title">Jump back in</h2>
       <button id="hero-btn" class="hero-card" type="button">
         <img id="hero-icon" class="hero-icon" alt="" />
         <div class="hero-text">
-          <small>JUMP BACK IN</small>
           <b id="hero-name">SKIP</b>
-          <span id="hero-best" class="chip">best —</span>
+          <p id="hero-tagline" class="tagline"></p>
+          <span id="hero-best" class="chip">best<b>—</b></span>
         </div>
-        <span class="hero-play">▶</span>
+        <span class="hero-play"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></span>
       </button>
     </section>
 
     <section class="grid-wrap">
-      <h2 class="section-title">ALL GAMES</h2>
+      <h2 class="section-title">All games</h2>
       <div id="grid" class="grid" role="list"></div>
     </section>
 
-    <footer class="foot">
-      <span>Five games · one finger · no downloads</span>
-    </footer>
+    <footer class="foot">One finger · no downloads</footer>
   </main>
 
   <!-- ─── Player (a game running inside the box) ─── -->
   <section id="player" class="player" hidden>
     <iframe id="frame" class="frame" title="Game" allow="autoplay; vibrate" src="about:blank"></iframe>
-    <button id="back" class="back-pill" type="button" aria-label="Back to games"><span class="chev">‹</span><span id="back-label">Games</span></button>
+    <button id="back" class="back-pill" type="button" aria-label="Back to games"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span id="back-label">Games</span></button>
     <div id="loading" class="loading"><div class="spinner"></div></div>
   </section>
 
@@ -65,9 +70,9 @@
       <label class="field"><span>Graphics</span>
         <select id="opt-quality" class="select"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
       </label>
-      <p class="note">Settings apply to every game in the box.</p>
-      <button id="reset-scores" class="btn danger" type="button">RESET ALL SCORES</button>
-      <button class="btn primary" type="button" data-close>DONE</button>
+      <p class="note">Applies to every game in the box.</p>
+      <button id="reset-scores" class="btn danger" type="button">Reset all scores</button>
+      <button class="btn primary" type="button" data-close>Done</button>
     </div>
   </section>
 

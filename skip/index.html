@@ -17,6 +17,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="art/icon.svg" />
   <link rel="apple-touch-icon" href="art/icon-180.png" />
+  <link rel="stylesheet" href="../css/game-ui.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body data-state="title">
@@ -25,30 +26,28 @@
   <!-- ─── Classic start screen (attract-mode demo plays behind it) ─── -->
   <section id="title" class="overlay screen" data-ui>
     <header class="title-block">
-      <div class="eyebrow">✦ a quiet lake · one tap ✦</div>
+      <div class="eyebrow">A quiet lake · one tap</div>
       <h1 class="logo">SKIP</h1>
       <p class="tagline">Tap when the stone kisses the water.</p>
     </header>
 
     <div id="challenge-banner" class="banner" hidden>
-      <div class="banner-ico">⚔️</div>
       <div class="banner-text"><b id="banner-title">NIK challenges you</b><small id="banner-sub">87.3 m on the same lake</small></div>
-      <button id="banner-accept" class="btn primary small" type="button">ACCEPT</button>
+      <button id="banner-accept" class="btn primary small" type="button">Accept</button>
     </div>
 
     <div class="start">
       <div id="tap-start" class="tap-start">TAP TO START</div>
       <nav class="menu-list">
-        <button id="play" class="menu-item" type="button"><span class="mi-ico">▶</span>PLAY</button>
-        <button id="open-board" class="menu-item" type="button"><span class="mi-ico">🏆</span>LEADERBOARD</button>
-        <button id="open-challenge" class="menu-item" type="button"><span class="mi-ico">⚔️</span>CHALLENGE A FRIEND</button>
-        <button id="open-howto" class="menu-item" type="button"><span class="mi-ico">💡</span>HOW TO PLAY</button>
-        <button id="open-settings" class="menu-item" type="button"><span class="mi-ico">⚙︎</span>SETTINGS</button>
+        <button id="play" class="btn primary" type="button">Play</button>
+        <button id="open-board" class="btn" type="button">Leaderboard</button>
+        <button id="open-challenge" class="btn" type="button">Challenge a friend</button>
+        <div class="btn-row"><button id="open-howto" class="btn" type="button">How to play</button><button id="open-settings" class="btn" type="button">Settings</button></div>
       </nav>
     </div>
 
     <footer class="title-footer">
-      <div class="hiscore">HIGH SCORE <strong id="best">0.0</strong><span class="unit">m</span> <span id="best-tag" class="tag-chip">YOU</span></div>
+      <div class="hiscore">High score <strong id="best">0.0</strong><span class="unit">m</span> <span id="best-tag" class="tag-chip">YOU</span></div>
       <div id="gc-chip" class="gc-chip" data-status="local"><span class="dot"></span><span id="gc-text">Local scores</span></div>
     </footer>
   </section>
@@ -66,8 +65,8 @@
   <!-- ─── Leaderboard screen ─── -->
   <section id="board" class="overlay screen" data-ui hidden>
     <div class="screen-head">
-      <button class="icon-btn back close-screen" type="button" aria-label="Back">‹</button>
-      <h2>LEADERBOARD</h2>
+      <button class="icon-btn back close-screen" type="button" aria-label="Back"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2>Leaderboard</h2>
     </div>
     <div class="tabs" role="tablist">
       <button class="tab active" data-tab="local" type="button">LOCAL</button>
@@ -81,14 +80,13 @@
       <div id="tab-friends" class="tab-pane">
         <p class="pane-note">Friends you've traded challenge links with. Beat their best on the same lake.</p>
         <ol id="friends-list" class="board-list"></ol>
-        <button id="friends-challenge" class="btn primary" type="button">⚔️ CHALLENGE A FRIEND</button>
+        <button id="friends-challenge" class="btn primary" type="button">Challenge a friend</button>
       </div>
       <div id="tab-global" class="tab-pane">
         <div id="global-status" class="pane-note"></div>
-        <button id="gc-open" class="btn primary" type="button" hidden>OPEN GAME CENTER</button>
-        <button id="gc-friends" class="btn ghost" type="button" hidden>GAME CENTER FRIENDS</button>
+        <button id="gc-open" class="btn primary" type="button" hidden>Open Game Center</button>
+        <button id="gc-friends" class="btn" type="button" hidden>Game Center friends</button>
         <div id="global-web" class="global-web" hidden>
-          <div class="gc-badge">🎮</div>
           <p>Global rankings run on <b>Game Center</b> in the iOS app. On the web your scores stay on this device, and you can still race friends with challenge links.</p>
         </div>
       </div>
@@ -98,33 +96,33 @@
   <!-- ─── How to play ─── -->
   <section id="howto" class="overlay menu" data-ui hidden>
     <div class="panel">
-      <h2>HOW TO PLAY</h2>
+      <h2>How to play</h2>
       <ol class="steps">
-        <li><span class="step-ico">🤚</span><div><b>Hold to wind up</b><small>Release to throw. A longer hold throws harder.</small></div></li>
-        <li><span class="step-ico">💧</span><div><b>Tap when it kisses the water</b><small>Watch the stone's reflection rise to meet it. A perfect tap keeps your speed.</small></div></li>
-        <li><span class="step-ico">✨</span><div><b>Land on glowing motes</b><small>They give you a burst of speed.</small></div></li>
-        <li><span class="step-ico">🪷</span><div><b>Miss the lily pads</b><small>Tap early to dip the stone and shorten a hop.</small></div></li>
-        <li><span class="step-ico">⚔️</span><div><b>Challenge a friend</b><small>Send your run as a link. They play the exact same lake.</small></div></li>
+        <li><span class="step-n">1</span><div><b>Hold to wind up</b><small>Release to throw. A longer hold throws harder.</small></div></li>
+        <li><span class="step-n">2</span><div><b>Tap when it kisses the water</b><small>The stone's reflection rises to meet it. A perfect tap keeps your speed.</small></div></li>
+        <li><span class="step-n">3</span><div><b>Land on glowing motes</b><small>They give you a burst of speed.</small></div></li>
+        <li><span class="step-n">4</span><div><b>Miss the lily pads</b><small>Tap early to dip the stone and shorten a hop.</small></div></li>
+        <li><span class="step-n">5</span><div><b>Challenge a friend</b><small>Send your run as a link. They play the exact same lake.</small></div></li>
       </ol>
-      <button class="btn primary close-panel" type="button">GOT IT</button>
+      <button class="btn primary close-panel" type="button">Got it</button>
     </div>
   </section>
 
   <!-- ─── Challenge explainer ─── -->
   <section id="challenge" class="overlay menu" data-ui hidden>
     <div class="panel">
-      <h2>CHALLENGE A FRIEND</h2>
+      <h2>Challenge a friend</h2>
       <p class="pane-note">Play a run. When it ends, send it as a link. Your friend throws on the <b>same lake</b> — same motes, same lily pads — and the result card shows who won. They can fire a reply link straight back.</p>
       <label class="field"><span>Your tag</span><input id="tag-input" class="tag-input" type="text" maxlength="3" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="AAA" /></label>
-      <button id="challenge-play" class="btn primary" type="button">PLAY A CHALLENGE RUN</button>
-      <button class="btn ghost close-panel" type="button">BACK</button>
+      <button id="challenge-play" class="btn primary" type="button">Play a challenge run</button>
+      <button class="btn close-panel" type="button">Back</button>
     </div>
   </section>
 
   <!-- ─── Settings ─── -->
   <section id="settings" class="overlay menu" data-ui hidden>
     <div class="panel">
-      <h2>SETTINGS</h2>
+      <h2>Settings</h2>
       <label class="toggle"><span>Sound</span><input id="opt-sound" type="checkbox" checked /><i></i></label>
       <label class="toggle"><span>Haptics</span><input id="opt-haptics" type="checkbox" checked /><i></i></label>
       <label class="field"><span>Your tag</span><input id="tag-input-2" class="tag-input" type="text" maxlength="3" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="AAA" /></label>
@@ -132,16 +130,16 @@
         <select id="opt-quality" class="select"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
       </label>
       <div class="about">All art and sound in SKIP are generated by code.<br>No downloads, no tracking.</div>
-      <button class="btn primary close-panel" type="button">DONE</button>
+      <button class="btn primary close-panel" type="button">Done</button>
     </div>
   </section>
 
   <!-- ─── Run over ─── -->
   <section id="over" class="overlay menu" data-ui hidden>
     <div class="panel over-panel">
-      <div id="new-best" class="new-best" hidden>✦ NEW BEST ✦</div>
+      <div id="new-best" class="new-best" hidden>New best</div>
       <div id="end-line" class="end-line"></div>
-      <div class="label">DISTANCE</div>
+      <div class="label">Distance</div>
       <div id="over-distance" class="big">0<span class="unit">m</span></div>
       <div id="versus" class="versus" hidden><span id="versus-text"></span></div>
       <div class="stats">
@@ -150,11 +148,11 @@
         <div class="stat"><b id="over-motes">0</b><span>motes</span></div>
         <div class="stat"><b id="over-rank">–</b><span>rank</span></div>
       </div>
-      <button id="retry" class="btn primary big" type="button">THROW AGAIN</button>
-      <button id="send-challenge" class="btn accent" type="button">⚔️ CHALLENGE A FRIEND</button>
+      <button id="retry" class="btn primary big" type="button">Throw again</button>
+      <button id="send-challenge" class="btn" type="button">Challenge a friend</button>
       <div class="btn-row">
-        <button id="over-board" class="btn ghost" type="button"><span class="ico">🏆</span>BOARD</button>
-        <button id="to-title" class="btn ghost" type="button"><span class="ico">⌂</span>MENU</button>
+        <button id="over-board" class="btn" type="button">Board</button>
+        <button id="to-title" class="btn" type="button">Menu</button>
       </div>
     </div>
   </section>

@@ -37,3 +37,16 @@ export function bindHold(target, { onPress, onRelease }) {
 
   return state;
 }
+
+/** One verb: tap. Pointer down anywhere on the play surface, or Space / Enter. */
+export function bindTap(target, onTap) {
+  const down = (e) => {
+    if (e.target && e.target.closest && e.target.closest('[data-ui]')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault(); onTap();
+  };
+  target.addEventListener('pointerdown', down, { passive: false });
+  window.addEventListener('keydown', (e) => { if ((e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowUp') && !e.repeat) { e.preventDefault(); onTap(); } });
+  target.addEventListener('touchend', e => e.preventDefault(), { passive: false });
+  target.addEventListener('contextmenu', e => e.preventDefault());
+}

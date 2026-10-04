@@ -48,10 +48,10 @@ html, body { background: #2a6fb8; }
   font-weight: 800;
   font-size: 18px;
   letter-spacing: 0.18em;
-  animation: pulse 1.4s ease-in-out infinite;
+  
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
-.finger { display: inline-block; animation: bob 1.4s ease-in-out infinite; margin-right: 6px; }
+.finger { display: inline-block;  margin-right: 6px; }
 .title-best {
   font-size: 14px;
   letter-spacing: 0.2em;

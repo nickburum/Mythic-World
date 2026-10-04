@@ -193,12 +193,12 @@ class App {
       const win = c.score > c.reply.score;
       this.ui.bannerTitle.textContent = win ? `${c.reply.tag} fell short: ${fmt(c.reply.score)} m` : `${c.reply.tag} beat you: ${fmt(c.reply.score)} m`;
       this.ui.bannerSub.textContent = `vs your ${fmt(c.score)} m · rematch on the same lake?`;
-      this.ui.bannerAccept.textContent = 'REMATCH';
+      this.ui.bannerAccept.textContent = 'Rematch';
     } else {
       this.board.friends.record(c.tag, c.score, c.seed);
       this.ui.bannerTitle.textContent = `${c.tag} challenges you`;
       this.ui.bannerSub.textContent = `${fmt(c.score)} m · same lake, same lily pads`;
-      this.ui.bannerAccept.textContent = 'ACCEPT';
+      this.ui.bannerAccept.textContent = 'Accept';
     }
     this.ui.challengeBanner.hidden = false;
     history.replaceState(null, '', location.pathname + location.search);
@@ -248,7 +248,7 @@ class App {
     this.setState(STATE.READY);
     this.lastHud = { d: -1, s: -1 }; this.updateHud(true);
     this.ui.hudTarget.hidden = !this.challenge;
-    if (this.challenge) this.ui.hudTarget.textContent = `⚔️ beat ${this.challenge.tag} · ${fmt(this.challenge.score)} m`;
+    if (this.challenge) this.ui.hudTarget.textContent = `Beat ${this.challenge.tag} · ${fmt(this.challenge.score)} m`;
     this.hint('HOLD ANYWHERE TO WIND UP');
   }
   hint(text) { this.ui.hint.textContent = text; this.ui.hint.style.opacity = text ? 1 : 0; }
@@ -316,12 +316,12 @@ class App {
     this.ui.endLine.textContent = END_LINES[e.reason] || '';
     if (this.challenge) {
       const diff = e.distance - this.challenge.score;
-      this.ui.versusText.textContent = diff > 0 ? `🏆 You beat ${this.challenge.tag} by ${fmt(diff)} m` : diff < 0 ? `${this.challenge.tag} wins by ${fmt(-diff)} m` : `Dead heat with ${this.challenge.tag}!`;
+      this.ui.versusText.textContent = diff > 0 ? `You beat ${this.challenge.tag} by ${fmt(diff)} m` : diff < 0 ? `${this.challenge.tag} wins by ${fmt(-diff)} m` : `Dead heat with ${this.challenge.tag}!`;
       this.ui.versus.hidden = false;
-      this.ui.sendChallenge.textContent = '⚔️ SEND RESULT';
+      this.ui.sendChallenge.textContent = 'Send result';
     } else {
       this.ui.versus.hidden = true;
-      this.ui.sendChallenge.textContent = '⚔️ CHALLENGE A FRIEND';
+      this.ui.sendChallenge.textContent = 'Challenge a friend';
     }
     this.refreshHiscore();
     this.ui.over.hidden = false;

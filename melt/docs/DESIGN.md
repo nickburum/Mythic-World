@@ -2,12 +2,12 @@
 
 ## One-liner
 
-**Hold to heat. Release to cool. Be the right state of matter.**
-A one-finger endless runner where the only control is your temperature, and your temperature decides whether you are ice, water or steam.
+**Tap to change state. Be the right one when it counts.**
+A one-tap endless runner: each tap cycles ice → water → steam → ice, and your state decides what you pass through.
 
 ## Why it is new
 
-Hyper-casual verbs are almost always spatial: tap to jump, hold to fly, swipe to switch lane, tap to drop. MELT's verb is **thermal**. The finger never moves the character; it moves a thermometer, and the character's form, altitude and abilities all fall out of that one continuous value:
+Hyper-casual verbs are almost always spatial: tap to jump, hold to fly, swipe to switch lane. MELT's verb is a **state change**. The finger never moves the character; a tap changes what it *is*, and form, altitude and abilities all fall out of that one choice:
 
 | Phase | Temperature | Where it is | Gets through |
 |---|---|---|---|
@@ -17,14 +17,14 @@ Hyper-casual verbs are almost always spatial: tap to jump, hold to fly, swipe to
 
 Ceiling beams block steam and let anything on the floor pass. Geysers and cold vents shove your temperature by 26° without warning.
 
-The depth comes from the thermometer being continuous and the rates asymmetric-ish (heat 60°/s, cool 56°/s): an expert hovers just under a threshold to flip states instantly, a beginner swings wildly between extremes. Phase changes also take a beat to *act* (steam needs 0.12 s to rise), so the skill is anticipation, which is exactly the "near-miss" feel hyper-casual lives on.
+The depth comes from the cycle being one-way (ice → water → steam → ice): some changes are one tap, some are two, so you read the next obstacle and count. Steam takes a beat to rise and a beat to fall, so the skill is anticipation, which is exactly the "near-miss" feel hyper-casual lives on.
 
 ## Hyper-casual checklist
 
 | Requirement | MELT |
 |---|---|
-| Understood in 3 seconds | Title screen legend: three chips, three verbs. First obstacles carry a label (FLOAT / STAY LOW / ICE ONLY / WATER ONLY) and the icon of the state that passes. |
-| One input | Hold anywhere. Thumb-only, one-handed, portrait. |
+| Understood in 3 seconds | Title legend: three chips, three verbs; one tap moves to the next. First obstacles carry a label (FLOAT / STAY LOW / ICE ONLY / WATER ONLY) and the icon of the state that passes. |
+| One input | Tap anywhere. Thumb-only, one-handed, portrait. |
 | 30–60 s sessions | One mistake ends the run. |
 | Near-miss failure | Every death line says exactly what state you were and what you needed ("Water can't float. Heat up to steam!"). |
 | "One more go" | One tap retry, no load. Each death teaches a rule. |

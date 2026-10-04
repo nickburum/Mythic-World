@@ -3,13 +3,14 @@
  * input, render loop and HTML overlays. Rules live in core/melt.js.
  */
 import { MeltGame, autopilot } from './core/melt.js';
+import { PHASE_TEMP } from './core/palette.js';
 import { CONFIG } from './core/config.js';
 import { Renderer } from './render/renderer.js';
 import { Effects } from './render/effects.js';
 import { Sfx } from './audio/sfx.js';
 import { storage, KEYS } from './platform/storage.js';
 import { haptics } from './platform/haptics.js';
-import { bindHold } from './platform/input.js';
+import { bindTap } from './platform/input.js';
 
 const $ = (id) => document.getElementById(id);
 const STATE = Object.freeze({ TITLE: 'title', PLAYING: 'playing', DYING: 'dying', OVER: 'over' });
@@ -19,15 +20,15 @@ const RETRY_LOCKOUT = 0.6;
 /** What went wrong, in one line, so every death teaches. */
 const DEATH_LINES = {
   'spikes:ice': 'Ice is too heavy to float over spikes.',
-  'spikes:water': 'Water can\'t float. Heat up to steam!',
-  'spikes:steam': 'Steam needs a moment to rise. Heat earlier!',
-  'beam:steam': 'Steam rises into beams. Cool down to stay low.',
-  'beam:water': 'Still sinking from steam. Cool down sooner!',
-  'beam:ice': 'Still sinking from steam. Cool down sooner!',
-  'glass:water': 'Water splashes off glass. Only ice breaks it.',
-  'glass:steam': 'Steam can\'t break glass. Freeze solid!',
-  'pipe:ice': 'Ice doesn\'t fit the pipe. Melt into water.',
-  'pipe:steam': 'Steam can\'t flow through pipes. Cool to water.',
+  'spikes:water': 'Water can\'t float. One tap for steam.',
+  'spikes:steam': 'Steam needs a moment to rise. Tap earlier!',
+  'beam:steam': 'Steam rises into beams. One tap drops you to ice.',
+  'beam:water': 'Still sinking from steam. Tap sooner.',
+  'beam:ice': 'Still sinking from steam. Tap sooner.',
+  'glass:water': 'Water splashes off glass. Two taps to ice.',
+  'glass:steam': 'Steam can\'t break glass. One tap to ice.',
+  'pipe:ice': 'Ice doesn\'t fit the pipe. One tap to water.',
+  'pipe:steam': 'Steam can\'t flow through pipes. Two taps to water.',
 };
 
 class App {
@@ -40,10 +41,10 @@ class App {
     this.state = STATE.TITLE;
     this.time = 0; this.stateTime = 0;
     this.last = performance.now();
-    this.holding = false;
     this.autopilot = false;        // test/screenshot hook
-    this.shownTemp = this.game.temp;
+    this.shownTemp = PHASE_TEMP[this.game.phase];
     this.morphAge = 10;
+    this.lastAuto = 0;
     this.best = storage.get(KEYS.BEST, 0);
     this.games = storage.get(KEYS.GAMES, 0);
     this.muted = storage.get(KEYS.MUTED, false);
@@ -80,7 +81,7 @@ class App {
   }
 
   bindUi() {
-    bindHold(this.canvas, { onPress: () => this.press(), onRelease: () => this.release() });
+    bindTap(this.canvas, () => this.press());
     this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.sfx.tap(); this.start(); });
     this.ui.share.addEventListener('click', () => this.share());
     this.ui.mute.addEventListener('click', () => this.toggleMute());
@@ -104,19 +105,18 @@ class App {
 
   press() {
     this.sfx.unlock();
-    if (this.state === STATE.TITLE) this.start();
-    else if (this.state === STATE.OVER && this.stateTime > RETRY_LOCKOUT) { this.sfx.tap(); this.start(); }
-    this.holding = true;
+    if (this.state === STATE.TITLE) { this.start(); return; }
+    if (this.state === STATE.OVER && this.stateTime > RETRY_LOCKOUT) { this.sfx.tap(); this.start(); return; }
+    if (this.state === STATE.PLAYING) this.game.tap();
   }
-
-  release() { this.holding = false; }
 
   start() {
     this.game.reset();
     this.game.setViewWidth(this.renderer.viewWorldW());
     this.fx.clear();
-    this.shownTemp = this.game.temp;
+    this.shownTemp = PHASE_TEMP[this.game.phase];
     this.morphAge = 10;
+    this.lastAuto = 0;
     this.setState(STATE.PLAYING);
     this.updateScore(0);
   }
@@ -198,17 +198,14 @@ class App {
 
     const g = this.game;
     if (this.state === STATE.PLAYING) {
-      const hold = this.autopilot ? autopilot(g) : this.holding;
-      g.update(dt, hold);
+      if (this.autopilot && this.time - this.lastAuto > 0.15 && autopilot(g)) { g.tap(); this.lastAuto = this.time; }
+      g.update(dt);
       const [x, y] = this.playerPos();
-      this.fx.ambient(x, y, hold, g.phase, dt);
-      this.sfx.setHeat(hold ? 1 : 0);
-    } else {
-      this.sfx.setHeat(0);
+      this.fx.ambient(x, y, g.phase === 'steam', g.phase, dt);
     }
     if (this.state === STATE.DYING && this.stateTime >= DIE_TIME) this.gameOver();
 
-    this.shownTemp += (g.temp - this.shownTemp) * Math.min(1, dt * 6);
+    this.shownTemp += (PHASE_TEMP[g.phase] - this.shownTemp) * Math.min(1, dt * 4);
     this.fx.update(dt);
     this.scoreScale += (1 - this.scoreScale) * Math.min(1, dt * 12);
     this.ui.score.style.transform = `scale(${this.scoreScale.toFixed(3)})`;
@@ -226,10 +223,10 @@ class App {
     r.drawRock(g.distance);
     for (const o of g.obstacles) r.drawObstacle(o, this.time);
     if (this.state !== STATE.DYING && this.state !== STATE.OVER) {
-      r.drawPlayer({ phase: g.phase, altitude: g.altitude, holding: this.holding, time: this.time, morph: Math.min(1, this.morphAge / 0.35), temp: g.temp });
+      r.drawPlayer({ phase: g.phase, altitude: g.altitude, time: this.time, morph: Math.min(1, this.morphAge / 0.35) });
     }
     this.fx.drawWorld();
-    if (this.state !== STATE.TITLE) r.drawGauge(g.temp, this.state === STATE.PLAYING && (this.autopilot ? autopilot(g) : this.holding));
+    if (this.state !== STATE.TITLE) r.drawGauge(g.phase, this.time);
     r.end();
     r.drawVignette();
     this.fx.drawScreen();
@@ -243,7 +240,7 @@ class App {
     if (!this.muted) this.sfx.tap();
   }
   applyMuteIcon() {
-    this.ui.mute.textContent = this.muted ? '🔇' : '🔊';
+    this.ui.mute.classList.toggle('muted', this.muted);
     this.ui.mute.setAttribute('aria-label', this.muted ? 'Unmute' : 'Mute');
   }
   async share() {

@@ -7,8 +7,8 @@
  * the hub needs no messaging to show them.
  */
 export const GAMES = [
-  { id: 'melt', name: 'MELT', tagline: 'Hold to heat, release to cool.', path: 'melt/', accent: '#3aa7ff', accent2: '#ff8a5b',
-    best: { key: 'melt.best', kind: 'int', unit: '' }, control: 'Hold' },
+  { id: 'melt', name: 'MELT', tagline: 'Tap to change state.', path: 'melt/', accent: '#3aa7ff', accent2: '#ff8a5b',
+    best: { key: 'melt.best', kind: 'int', unit: '' }, control: 'Tap' },
   { id: 'skip', name: 'SKIP', tagline: 'Tap when the stone kisses the water.', path: 'skip/', accent: '#ffb36b', accent2: '#5b6fd6',
     best: { key: 'skip.board', kind: 'board', unit: ' m' }, control: 'Tap', leaderboardID: 'com.mythicworld.skip.distance' },
   { id: 'pop', name: 'POP', tagline: 'Pop the bubbles that match.', path: 'pop/', accent: '#ff7ab6', accent2: '#7df0ff',

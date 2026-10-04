@@ -37,11 +37,12 @@ async function renderScreens(browser) {
   const embedded = frame ? await frame.evaluate(() => !document.querySelector('.gsw-handle')) : false;
   if (!embedded) errors.push('switcher should hide inside the box');
   await page.click('#back'); await page.waitForTimeout(300);
-  const home = await page.evaluate(() => document.body.dataset.view === 'home' && !!document.getElementById('hero') && !document.getElementById('hero').hidden);
-  if (!home) errors.push('back did not return home with a hero card');
+  const home = await page.evaluate(() => document.body.dataset.view === 'home' && document.getElementById('hero-name').textContent === 'SKIP' && document.querySelectorAll('#grid .card').length === 4);
+  if (!home) errors.push('back did not return home with SKIP as the hero and four cards');
   await shot(page, 'home-hero');
   await page.click('#open-settings'); await page.waitForTimeout(400); await shot(page, 'settings');
   await page.click('.sheet .btn.primary');
+  await page.click('#hero-btn'); await page.waitForTimeout(300); await page.click('#back'); await page.waitForTimeout(250);
   // every game opens
   for (const id of ['melt', 'pop', 'orbit', 'sky-temple']) {
     await page.click(`.card[data-id="${id}"]`); await page.waitForTimeout(300);

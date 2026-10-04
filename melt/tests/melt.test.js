@@ -1,235 +1,92 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MeltGame, PHASE, OBSTACLES, phaseForTemp, phaseDistance, autopilot } from '../src/core/melt.js';
+import { MeltGame, PHASE, OBSTACLES, tapsBetween, nextPhase, hotter, colder, autopilot } from '../src/core/melt.js';
 import { CONFIG } from '../src/core/config.js';
 
 const DT = 1 / 60;
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function run(g, seconds) { for (let t = 0; t < seconds; t += DT) g.update(DT); }
+function placeOnly(g, type, x) { g.obstacles = []; g.nextSpawnX = 1e9; g.lastObstacle = null; return g.spawn(type, x); }
+/** Tap with a cooldown gap so the debounce never swallows one. */
+function tapTo(g, phase) { while (g.phase !== phase) { g.tap(); g.update(CONFIG.TAP_COOLDOWN + 0.01); } }
 
-/** Deterministic PRNG so failures reproduce. */
-function rng(seed) {
-  let a = seed >>> 0;
-  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-}
-
-/** Run until the given time passes, holding or not. */
-function run(g, seconds, holding) {
-  for (let t = 0; t < seconds; t += DT) g.update(DT, holding);
-}
-
-/** Replace the generated course with a single obstacle at `x`. */
-function placeOnly(g, type, x) {
-  g.obstacles = [];
-  g.nextSpawnX = 1e9; // stop generation
-  g.lastObstacle = null;
-  return g.spawn(type, x);
-}
-
-test('starts as water, grounded, at the configured temperature', () => {
+test('starts as water, grounded', () => {
   const g = new MeltGame({ random: rng(1) });
-  assert.equal(g.temp, CONFIG.TEMP_START);
-  assert.equal(g.phase, PHASE.WATER);
-  assert.equal(g.altitude, 0);
-  assert.equal(g.score, 0);
-  assert.ok(g.obstacles.length >= 1, 'course is pre-populated');
+  assert.equal(g.phase, PHASE.WATER); assert.equal(g.altitude, 0); assert.ok(g.obstacles.length >= 1);
 });
-
-test('phase thresholds', () => {
-  assert.equal(phaseForTemp(0), PHASE.ICE);
-  assert.equal(phaseForTemp(CONFIG.ICE_MAX - 0.01), PHASE.ICE);
-  assert.equal(phaseForTemp(CONFIG.ICE_MAX), PHASE.WATER);
-  assert.equal(phaseForTemp(CONFIG.STEAM_MIN - 0.01), PHASE.WATER);
-  assert.equal(phaseForTemp(CONFIG.STEAM_MIN), PHASE.STEAM);
-  assert.equal(phaseForTemp(100), PHASE.STEAM);
+test('one tap cycles ice → water → steam → ice', () => {
+  assert.equal(nextPhase('ice'), 'water'); assert.equal(nextPhase('water'), 'steam'); assert.equal(nextPhase('steam'), 'ice');
+  assert.equal(tapsBetween('steam', 'ice'), 1); assert.equal(tapsBetween('ice', 'steam'), 2); assert.equal(tapsBetween('water', 'water'), 0);
+  const g = new MeltGame({ random: rng(2) }); placeOnly(g, 'beam', 5000);
+  const seen = []; g.on('phase', e => seen.push(e.to));
+  tapTo(g, 'steam'); tapTo(g, 'ice');
+  assert.deepEqual(seen, ['steam', 'ice']);
 });
-
-test('holding heats to steam and floats up; releasing cools to ice and sinks', () => {
-  const g = new MeltGame({ random: rng(2) });
-  placeOnly(g, 'spikes', 5000);
-  const changes = [];
-  g.on('phase', e => changes.push(e.to));
-  run(g, 1.0, true);
-  assert.equal(g.phase, PHASE.STEAM);
-  assert.ok(g.temp > CONFIG.STEAM_MIN);
-  run(g, 0.5, true);
-  assert.equal(g.altitude, 1);
-  run(g, 2.0, false);
-  assert.equal(g.phase, PHASE.ICE);
-  assert.equal(g.altitude, 0);
-  assert.equal(g.temp, 0, 'temperature clamps at 0');
-  assert.deepEqual(changes, ['steam', 'water', 'ice']);
+test('taps are debounced', () => {
+  const g = new MeltGame({ random: rng(3) }); placeOnly(g, 'beam', 5000);
+  assert.equal(g.tap(), 'steam'); assert.equal(g.tap(), null, 'second tap within the cooldown is ignored');
+  g.update(CONFIG.TAP_COOLDOWN + 0.01); assert.equal(g.tap(), 'ice');
 });
-
-test('heating from the start reaches steam in a human-scale time', () => {
-  const g = new MeltGame({ random: rng(3) });
-  placeOnly(g, 'spikes', 5000);
-  let t = 0;
-  while (g.phase !== PHASE.STEAM) { g.update(DT, true); t += DT; }
-  assert.ok(t > 0.2 && t < 0.6, `took ${t.toFixed(2)}s`);
+test('steam floats up; anything else sinks', () => {
+  const g = new MeltGame({ random: rng(4) }); placeOnly(g, 'beam', 5000);
+  tapTo(g, 'steam'); run(g, 0.5); assert.equal(g.altitude, 1);
+  tapTo(g, 'ice'); run(g, 0.5); assert.equal(g.altitude, 0);
 });
-
-test('spikes kill a grounded droplet and let steam pass', () => {
-  const die = new MeltGame({ random: rng(4) });
-  placeOnly(die, 'spikes', CONFIG.PLAYER_X + 60);
-  let dead = null;
-  die.on('die', e => { dead = e; });
-  run(die, 1.5, false);
-  assert.ok(die.over);
-  assert.equal(dead.obstacle.type, 'spikes');
-
-  const live = new MeltGame({ random: rng(4) });
-  placeOnly(live, 'spikes', CONFIG.PLAYER_X + 400);
-  run(live, 2.0, true); // heat to steam, float, then cross
-  assert.ok(!live.over);
-  assert.equal(live.score, 1);
+test('spikes need steam, beam blocks steam, glass needs ice, pipe needs water', () => {
+  const dead = (type, phase, x = CONFIG.PLAYER_X + 300) => { const g = new MeltGame({ random: rng(5) }); placeOnly(g, type, x); tapTo(g, phase); run(g, 2.5); return g.over; };
+  assert.equal(dead('spikes', 'steam'), false); assert.equal(dead('spikes', 'water'), true); assert.equal(dead('spikes', 'ice'), true);
+  assert.equal(dead('beam', 'water'), false); assert.equal(dead('beam', 'ice'), false); assert.equal(dead('beam', 'steam'), true);
+  assert.equal(dead('glass', 'ice'), false); assert.equal(dead('glass', 'water'), true);
+  assert.equal(dead('pipe', 'water'), false); assert.equal(dead('pipe', 'ice'), true);
 });
-
-test('beam kills steam and lets ice or water pass', () => {
-  const g = new MeltGame({ random: rng(5) });
-  placeOnly(g, 'beam', CONFIG.PLAYER_X + 400);
-  run(g, 2.0, true);
-  assert.ok(g.over);
-
-  const w = new MeltGame({ random: rng(5) });
-  placeOnly(w, 'beam', CONFIG.PLAYER_X + 200);
-  // hover in the water band
-  for (let t = 0; t < 2; t += DT) w.update(DT, w.temp < 50);
-  assert.ok(!w.over);
-  assert.equal(w.score, 1);
+test('hazards shove one step and never kill', () => {
+  assert.equal(hotter('water'), 'steam'); assert.equal(hotter('steam'), 'steam'); assert.equal(colder('water'), 'ice'); assert.equal(colder('ice'), 'ice');
+  const g = new MeltGame({ random: rng(6) }); placeOnly(g, 'geyser', CONFIG.PLAYER_X + 120);
+  let hits = 0; g.on('hazard', () => hits++);
+  run(g, 1.5); assert.equal(hits, 1); assert.equal(g.phase, 'steam'); assert.ok(!g.over);
 });
-
-test('glass needs ice, pipe needs water', () => {
-  const g1 = new MeltGame({ random: rng(6) });
-  placeOnly(g1, 'glass', CONFIG.PLAYER_X + 500);
-  run(g1, 2.5, false); // cools to ice before arriving
-  assert.ok(!g1.over);
-  assert.equal(g1.score, 1);
-
-  const g2 = new MeltGame({ random: rng(6) });
-  placeOnly(g2, 'glass', CONFIG.PLAYER_X + 200);
-  for (let t = 0; t < 2; t += DT) g2.update(DT, g2.temp < 50); // stays water
-  assert.ok(g2.over, 'water splats on glass');
-
-  const p1 = new MeltGame({ random: rng(7) });
-  placeOnly(p1, 'pipe', CONFIG.PLAYER_X + 200);
-  for (let t = 0; t < 2; t += DT) p1.update(DT, p1.temp < 50);
-  assert.ok(!p1.over);
-
-  const p2 = new MeltGame({ random: rng(7) });
-  placeOnly(p2, 'pipe', CONFIG.PLAYER_X + 500);
-  run(p2, 2.5, false); // ice
-  assert.ok(p2.over, 'ice is too rigid for the pipe');
+test('gaps are budgeted for the worst legitimate phase leaving an obstacle', () => {
+  const g = new MeltGame({ random: rng(7) }); g.score = 100;
+  const speed = g.speedForScore(100), d = CONFIG.DIFFICULTY_END;
+  // leaving a beam as ice, spikes need two taps; leaving a beam as water, one tap → budget two
+  assert.ok(Math.abs(g.gapAfter({ type: 'beam' }, 'spikes') - CONFIG.TIME_TWO * d * speed) < 1e-6);
+  // leaving spikes (steam), glass is one tap (steam → ice)
+  assert.ok(Math.abs(g.gapAfter({ type: 'spikes' }, 'glass') - CONFIG.TIME_ONE * d * speed) < 1e-6);
+  // leaving glass (ice), a beam needs nothing
+  assert.ok(Math.abs(g.gapAfter({ type: 'glass' }, 'beam') - CONFIG.TIME_SAME * d * speed) < 1e-6);
+  // leaving a pipe (water), glass is two taps around the cycle
+  assert.ok(Math.abs(g.gapAfter({ type: 'pipe' }, 'glass') - CONFIG.TIME_TWO * d * speed) < 1e-6);
 });
-
-test('hazards shove the temperature once and never kill', () => {
+test('types unlock with score; speed ramps and caps', () => {
   const g = new MeltGame({ random: rng(8) });
-  placeOnly(g, 'geyser', CONFIG.PLAYER_X + 120);
-  let hits = 0;
-  const before = g.temp;
-  g.on('hazard', () => { hits++; assert.ok(g.temp > before + 20, 'geyser heated us'); });
-  for (let t = 0; t < 1.5; t += DT) g.update(DT, g.temp < before); // try to hold temperature
-  assert.equal(hits, 1);
-  assert.ok(!g.over);
-
-  const v = new MeltGame({ random: rng(8) });
-  placeOnly(v, 'vent', CONFIG.PLAYER_X + 120);
-  v.on('hazard', () => { assert.ok(v.temp < CONFIG.TEMP_START); });
-  run(v, 0.4, true);
-});
-
-test('phaseDistance measures the state change between requirements', () => {
-  assert.equal(phaseDistance(['steam'], ['ice']), 2);
-  assert.equal(phaseDistance(['steam'], ['ice', 'water']), 1);
-  assert.equal(phaseDistance(['water'], ['ice', 'water']), 0);
-  assert.equal(phaseDistance(['ice'], ['ice']), 0);
-});
-
-test('gaps are sized to the phase change the player will actually make', () => {
-  const g = new MeltGame({ random: rng(9) });
-  g.score = 100; // everything unlocked, difficulty at minimum
-  // glass (ice) → beam (ice|water, arrive as ice) → spikes (steam) must get the opposite-change budget
-  g.obstacles = []; g.lastObstacle = null; g.prevObstacleType = null; g.pendingType = 'glass';
-  g.nextSpawnX = CONFIG.SPAWN_X;
-  g.random = () => 0; // chooseNext picks the first pool entry deterministically
-  g.fillAhead();
-  const glass = g.obstacles[0];
-  assert.equal(glass.type, 'glass');
-  assert.equal(glass.arrivePhase, 'ice');
-  assert.equal(g.arrivePhase('beam', 'ice'), 'ice');
-  assert.equal(g.arrivePhase('beam', 'steam'), 'water');
-  const speed = g.speedForScore(100);
-  const beam = { type: 'beam' };
-  // leaving a beam you may be ice or water: budget for whichever is worse for the next obstacle
-  assert.ok(Math.abs(g.gapAfter(beam, 'spikes') - CONFIG.TIME_OPPOSITE * CONFIG.DIFFICULTY_END * speed) < 1e-6);
-  assert.ok(Math.abs(g.gapAfter(beam, 'glass') - CONFIG.TIME_ADJACENT * CONFIG.DIFFICULTY_END * speed) < 1e-6);
-  assert.ok(Math.abs(g.gapAfter(beam, 'pipe') - CONFIG.TIME_ADJACENT * CONFIG.DIFFICULTY_END * speed) < 1e-6);
-  assert.ok(Math.abs(g.gapAfter(beam, 'beam') - CONFIG.TIME_SAME * CONFIG.DIFFICULTY_END * speed) < 1e-6);
-  assert.ok(Math.abs(g.gapAfter({ type: 'glass' }, 'beam') - CONFIG.TIME_SAME * CONFIG.DIFFICULTY_END * speed) < 1e-6);
-  assert.ok(Math.abs(g.gapAfter({ type: 'spikes' }, 'glass') - CONFIG.TIME_OPPOSITE * CONFIG.DIFFICULTY_END * speed) < 1e-6);
-});
-
-test('types unlock with score', () => {
-  const g = new MeltGame({ random: rng(10) });
-  assert.deepEqual(g.unlockedTypes('obstacle').sort(), ['beam', 'spikes']);
-  assert.deepEqual(g.unlockedTypes('hazard'), []);
-  g.score = 30;
-  assert.deepEqual(g.unlockedTypes('obstacle').sort(), ['beam', 'glass', 'pipe', 'spikes']);
+  assert.deepEqual(g.unlockedTypes('obstacle').sort(), ['beam', 'spikes']); g.score = 30;
   assert.deepEqual(g.unlockedTypes('hazard').sort(), ['geyser', 'vent']);
+  assert.equal(g.speedForScore(0), CONFIG.BASE_SPEED); assert.equal(g.speedForScore(1e6), CONFIG.MAX_SPEED);
 });
-
-test('speed ramps and caps', () => {
-  const g = new MeltGame();
-  assert.equal(g.speedForScore(0), CONFIG.BASE_SPEED);
-  assert.ok(g.speedForScore(20) > CONFIG.BASE_SPEED);
-  assert.equal(g.speedForScore(10000), CONFIG.MAX_SPEED);
-});
-
-test('milestones fire once in order; close calls are detected', () => {
-  const g = new MeltGame({ random: rng(11) });
-  const hit = [];
-  g.on('milestone', m => hit.push(m.score));
-  let near = 0;
-  g.on('nearmiss', () => near++);
-  // autopilot with a tight reaction keeps changing phase late → close calls happen
-  const queue = [];
-  while (g.score < 21 && !g.over) {
-    queue.push(autopilot(g));
-    const delayed = queue.length > 12 ? queue.shift() : false; // 0.2 s reaction
-    g.update(DT, delayed);
-  }
-  assert.ok(!g.over, 'died early in the milestone run');
-  assert.deepEqual(hit, [10, 20]);
-  assert.equal(near, g.closeCalls);
-});
-
-test('every generated course is beatable by a player with 0.25 s reaction (20 seeds × 120 passes)', () => {
+test('every generated course is beatable with a 0.25 s reaction (20 seeds × 120 passes)', () => {
   for (let seed = 100; seed < 120; seed++) {
     const g = new MeltGame({ random: rng(seed) });
-    const queue = [];
-    let steps = 0;
+    const queue = []; let steps = 0, lastTap = -1;
     while (g.score < 120 && !g.over && steps < 60 * 400) {
       queue.push(autopilot(g));
-      const delayed = queue.length > 15 ? queue.shift() : false;
-      g.update(DT, delayed);
-      steps++;
+      const want = queue.length > 15 ? queue.shift() : false;
+      if (want && autopilot(g) && g.time - lastTap > 0.15) { g.tap(); lastTap = g.time; }
+      g.update(DT); steps++;
     }
-    assert.ok(!g.over, `seed ${seed} died at score ${g.score} on ${g.deathPhase}`);
+    assert.ok(!g.over, `seed ${seed} died at ${g.score} as ${g.deathPhase}`);
     assert.equal(g.score, 120, `seed ${seed} stalled at ${g.score}`);
   }
 });
-
-test('a careless player who never releases dies within a few obstacles', () => {
-  const g = new MeltGame({ random: rng(12) });
-  run(g, 30, true);
-  assert.ok(g.over);
-  assert.ok(g.score < 8);
+test('milestones fire in order; close calls are counted', () => {
+  const g = new MeltGame({ random: rng(9) }); const hit = []; g.on('milestone', m => hit.push(m.score)); let near = 0; g.on('nearmiss', () => near++);
+  const queue = []; let lastTap = -1;
+  while (g.score < 21 && !g.over) { queue.push(autopilot(g)); const want = queue.length > 12 ? queue.shift() : false; if (want && autopilot(g) && g.time - lastTap > 0.15) { g.tap(); lastTap = g.time; } g.update(DT); }
+  assert.ok(!g.over); assert.deepEqual(hit, [10, 20]); assert.equal(near, g.closeCalls);
 });
-
-test('reset restores a fresh run', () => {
-  const g = new MeltGame({ random: rng(13) });
-  run(g, 30, true);
-  assert.ok(g.over);
-  g.reset();
-  assert.ok(!g.over);
-  assert.equal(g.score, 0);
-  assert.equal(g.phase, PHASE.WATER);
+test('a player who never taps dies within a few obstacles; reset restores a fresh run', () => {
+  const g = new MeltGame({ random: rng(10) }); run(g, 30); assert.ok(g.over); assert.ok(g.score < 8);
+  g.reset(); assert.ok(!g.over); assert.equal(g.score, 0); assert.equal(g.phase, PHASE.WATER);
+});
+test('obstacle catalogue is consistent', () => {
+  for (const [k, v] of Object.entries(OBSTACLES)) { assert.ok(v.kind === 'obstacle' || v.kind === 'hazard', k); if (v.kind === 'obstacle') assert.ok(v.needs.length >= 1); }
 });

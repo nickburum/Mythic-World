@@ -18,6 +18,9 @@ export const PHASE_COLORS = Object.freeze({
   steam: { fill: '#f6f8ff', edge: '#d9e0f2', dark: '#b9c3dd', text: '#ffffff' },
 });
 
+/** Sky temperature for a phase (the renderer eases between them). */
+export const PHASE_TEMP = Object.freeze({ ice: 8, water: 50, steam: 92 });
+
 /** Background gradient for a temperature 0..100: icy teal → warm ember. */
 export function skyForTemp(temp) {
   const t = clamp01(temp / 100);

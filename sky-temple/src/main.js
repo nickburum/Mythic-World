@@ -270,7 +270,7 @@ class App {
   }
 
   applyMuteIcon() {
-    this.ui.mute.textContent = this.muted ? '🔇' : '🔊';
+    this.ui.mute.classList.toggle('muted', this.muted);
     this.ui.mute.setAttribute('aria-label', this.muted ? 'Unmute' : 'Mute');
   }
 

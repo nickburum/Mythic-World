@@ -30,7 +30,7 @@ class App {
     this.state = 'title'; this.time = 0; this.stateTime = 0; this.last = performance.now(); this.trail = []; this.autopilot = false; this.lastAuto = 0; this.lastHud = -1;
     this.best = LS.get('best', 0); this.games = LS.get('games', 0); this.muted = LS.get('muted', false); this.haptics = LS.get('haptics', true); this.sfx.setMuted(this.muted);
     this.ui = { title: $('title'), hud: $('hud'), over: $('over'), score: $('score'), best: $('best'), overScore: $('over-score'), overBest: $('over-best'), newBest: $('new-best'), mute: $('mute') };
-    this.ui.best.textContent = this.best; this.ui.mute.textContent = this.muted ? '🔇' : '🔊';
+    this.ui.best.textContent = this.best; this.ui.mute.classList.toggle('muted', this.muted);
     const g = this.game;
     g.on('collect', (e) => { const [x, y] = this.r.pt(e.gem.angle); this.fx.burst(x, y, '#ffe66b'); this.sfx.gem(e.score); vib(10, this.haptics); if (this.ui.score) this.ui.score.textContent = e.score; });
     g.on('reverse', () => { this.sfx.reverse(); vib(6, this.haptics); const [x, y] = this.r.pt(g.angle); this.fx.burst(x, y, '#7df0ff', 8, 120); });
@@ -41,7 +41,7 @@ class App {
     this.canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
     window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); this.press(e); } });
     $('play').addEventListener('click', () => { this.click(); this.start(); }); $('retry').addEventListener('click', () => { this.click(); this.start(); }); $('to-title').addEventListener('click', () => { this.click(); this.toTitle(); });
-    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.ui.mute.textContent = this.muted ? '🔇' : '🔊'; });
+    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
     window.addEventListener('resize', () => this.r.resize()); document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
     window.__orbit = this; requestAnimationFrame((t) => this.frame(t));
   }

@@ -1,6 +1,5 @@
 /* POP — game-specific bits on top of the shared mobile UI kit (../css/game-ui.css). */
 html, body { background: #2a1430; }
-.logo { background: linear-gradient(180deg, #fff 0%, #ffd6ea 50%, #ff7ab6 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .sub { font-size: 14px; letter-spacing: .24em; color: var(--ink-dim); margin-top: 4px; }
 .sub span { font-weight: 900; color: #fff; }
 .lives { margin-top: 8px; font-size: 18px; letter-spacing: .3em; color: #ff7ab6; text-shadow: 0 2px 8px rgba(0,0,0,.4); }

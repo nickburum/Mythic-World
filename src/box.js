@@ -13,7 +13,8 @@ class Box {
   constructor() {
     this.settings = LS.get('gamebox.settings', { sound: true, haptics: true, quality: 'auto' });
     this.current = null;
-    this.ui = { grid: $('grid'), hero: $('hero'), heroBtn: $('hero-btn'), heroIcon: $('hero-icon'), heroName: $('hero-name'), heroBest: $('hero-best'),
+    this.ui = { grid: $('grid'), hero: $('hero'), heroBtn: $('hero-btn'), heroIcon: $('hero-icon'), heroName: $('hero-name'), heroBest: $('hero-best'), heroTitle: $('hero-title'), heroTagline: $('hero-tagline'),
+      soundBtn: $('toggle-sound'), soundOn: $('sound-on'), soundOff: $('sound-off'),
       player: $('player'), frame: $('frame'), back: $('back'), backLabel: $('back-label'), loading: $('loading'), settings: $('settings'),
       optSound: $('opt-sound'), optHaptics: $('opt-haptics'), optQuality: $('opt-quality'), toast: $('toast') };
     this.ui.optSound.checked = this.settings.sound; this.ui.optHaptics.checked = this.settings.haptics; this.ui.optQuality.value = this.settings.quality;
@@ -25,30 +26,30 @@ class Box {
     if (m && byId(m[1])) this.open(m[1], location.hash.replace(/^#play=[a-z-]+&?/, '#'));
   }
 
+  heroGame() { return byId(LS.get('gamebox.last', null)) || GAMES[0]; }
+
   render() {
-    this.ui.grid.innerHTML = GAMES.map(g => `
+    const hero = this.heroGame();
+    this.ui.grid.innerHTML = GAMES.filter(g => g.id !== hero.id).map(g => `
       <button class="card" type="button" data-id="${g.id}" role="listitem" style="--accent:${g.accent}">
-        <img src="${g.path}art/icon-192.png" alt="" width="56" height="56" />
+        <img src="${g.path}art/icon-192.png" alt="" width="64" height="64" />
         <b>${g.name}</b>
         <small>${g.tagline}</small>
-        <div class="meta"><span class="chip best" data-best="${g.id}">best ${formatBest(g, readBest(g, k => localStorage.getItem(k)))}</span><span class="chip ctl">${g.control}</span></div>
+        <div class="meta"><span class="chip" data-best="${g.id}">best<b>${formatBest(g, readBest(g, k => localStorage.getItem(k)))}</b></span></div>
       </button>`).join('');
     this.refreshHero();
   }
 
-  refreshBests() {
-    for (const g of GAMES) { const el = this.ui.grid.querySelector(`[data-best="${g.id}"]`); if (el) el.textContent = `best ${formatBest(g, readBest(g, k => localStorage.getItem(k)))}`; }
-    this.refreshHero();
-  }
+  refreshBests() { this.render(); }
 
   refreshHero() {
-    const last = byId(LS.get('gamebox.last', null));
-    this.ui.hero.hidden = !last;
-    if (!last) return;
-    this.ui.heroIcon.src = `${last.path}art/icon-192.png`;
-    this.ui.heroName.textContent = last.name;
-    this.ui.heroBest.textContent = `best ${formatBest(last, readBest(last, k => localStorage.getItem(k)))}`;
-    this.ui.heroBtn.dataset.id = last.id;
+    const g = this.heroGame();
+    this.ui.heroTitle.textContent = LS.get('gamebox.last', null) ? 'Jump back in' : 'Start here';
+    this.ui.heroIcon.src = `${g.path}art/icon-192.png`;
+    this.ui.heroName.textContent = g.name;
+    this.ui.heroTagline.textContent = g.tagline;
+    this.ui.heroBest.innerHTML = `best<b>${formatBest(g, readBest(g, k => localStorage.getItem(k)))}</b>`;
+    this.ui.heroBtn.dataset.id = g.id;
   }
 
   bind() {
@@ -56,8 +57,10 @@ class Box {
     this.ui.heroBtn.addEventListener('click', () => { vibrate(8); this.open(this.ui.heroBtn.dataset.id); });
     this.ui.back.addEventListener('click', () => { vibrate(8); this.close(); });
     $('open-settings').addEventListener('click', () => { vibrate(8); this.ui.settings.hidden = false; });
+    this.ui.soundBtn.addEventListener('click', () => { this.ui.optSound.checked = !this.ui.optSound.checked; this.ui.optSound.dispatchEvent(new Event('change')); });
     for (const el of document.querySelectorAll('[data-close]')) el.addEventListener('click', () => { this.ui.settings.hidden = true; });
-    const save = () => { this.settings = { sound: this.ui.optSound.checked, haptics: this.ui.optHaptics.checked, quality: this.ui.optQuality.value }; LS.set('gamebox.settings', this.settings); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); vibrate(6); };
+    const save = () => { this.settings = { sound: this.ui.optSound.checked, haptics: this.ui.optHaptics.checked, quality: this.ui.optQuality.value }; LS.set('gamebox.settings', this.settings); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); this.syncSound(); vibrate(6); };
+    this.syncSound();
     this.ui.optSound.addEventListener('change', save); this.ui.optHaptics.addEventListener('change', save); this.ui.optQuality.addEventListener('change', save);
     $('reset-scores').addEventListener('click', () => {
       if (!confirm('Reset every best score in the box?')) return;
@@ -94,6 +97,8 @@ class Box {
     this.refreshBests();
     if (pop && location.hash.includes('play=')) history.replaceState(null, '', location.pathname + location.search);
   }
+
+  syncSound() { const on = this.ui.optSound.checked; this.ui.soundOn.hidden = !on; this.ui.soundOff.hidden = on; }
 
   toast(text, ms = 2000) { const t = this.ui.toast; t.textContent = text; t.hidden = false; clearTimeout(this.toastT); this.toastT = setTimeout(() => { t.hidden = true; }, ms); }
 }

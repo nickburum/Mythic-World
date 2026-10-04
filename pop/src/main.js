@@ -27,7 +27,7 @@ class App {
     this.best = LS.get('best', 0); this.games = LS.get('games', 0); this.muted = LS.get('muted', false); this.haptics = LS.get('haptics', true);
     this.sfx.setMuted(this.muted); this.autopilot = false; this.pulse = 0; this.lastHud = {};
     this.ui = { title: $('title'), hud: $('hud'), over: $('over'), score: $('score'), lives: $('lives'), target: $('target-name'), best: $('best'), overScore: $('over-score'), overBest: $('over-best'), overCombo: $('over-combo'), newBest: $('new-best'), mute: $('mute') };
-    this.ui.best.textContent = this.best; this.ui.mute.textContent = this.muted ? '🔇' : '🔊';
+    this.ui.best.textContent = this.best; this.ui.mute.classList.toggle('muted', this.muted);
     const g = this.game;
     g.on('pop', (e) => this.onPop(e)); g.on('wrong', (e) => this.onWrong(e)); g.on('life', (e) => this.onLife(e)); g.on('target', () => this.onTarget()); g.on('gameover', (e) => this.onOver(e)); g.on('milestone', (m) => this.fx.pop(m.name.toUpperCase(), CONFIG.WORLD_W / 2, 200, { size: 28, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }));
     this.canvas.addEventListener('pointerdown', (e) => this.press(e), { passive: false });
@@ -35,7 +35,7 @@ class App {
     $('play').addEventListener('click', () => { this.click(); this.start(); });
     $('retry').addEventListener('click', () => { this.click(); this.start(); });
     $('to-title').addEventListener('click', () => { this.click(); this.toTitle(); });
-    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.ui.mute.textContent = this.muted ? '🔇' : '🔊'; });
+    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
     window.addEventListener('resize', () => this.r.resize());
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
     window.__pop = this;

@@ -15,7 +15,7 @@
   if (window.parent !== window) { document.documentElement.classList.add('in-box'); return; }
 
   const GAMES = [
-    { id: 'melt', name: 'MELT', tag: 'Hold to heat, release to cool', href: base + 'melt/', icon: base + 'melt/art/icon-192.png', hue: '#3aa7ff' },
+    { id: 'melt', name: 'MELT', tag: 'Tap to change state', href: base + 'melt/', icon: base + 'melt/art/icon-192.png', hue: '#3aa7ff' },
     { id: 'skip', name: 'SKIP', tag: 'Skip a stone across a sunset lake', href: base + 'skip/', icon: base + 'skip/art/icon-192.png', hue: '#ffb36b' },
     { id: 'pop', name: 'POP', tag: 'Pop the bubbles that match', href: base + 'pop/', icon: base + 'pop/art/icon-192.png', hue: '#ff7ab6' },
     { id: 'orbit', name: 'ORBIT', tag: 'Tap to reverse, dodge, collect', href: base + 'orbit/', icon: base + 'orbit/art/icon-192.png', hue: '#7df0ff' },

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>MELT</title>
-  <meta name="description" content="Hold to heat, release to cool. Be ice, water or steam at the right moment in this one-finger hyper-casual runner." />
+  <meta name="description" content="Tap to change state. Be ice, water or steam at the right moment in this one-tap runner." />
   <meta name="theme-color" content="#1b2a44" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -26,17 +26,17 @@
   <!-- Title -->
   <section id="title" class="overlay menu" data-ui>
     <div class="title-block">
-      <div class="eyebrow">✦ one finger · three states ✦</div>
+      <div class="eyebrow">One tap · three states</div>
       <h1 class="logo">MELT</h1>
-      <p class="tagline">Hold to heat. Release to cool.<br>Be the right state of matter.</p>
+      <p class="tagline">Tap to change state. Ice, water, steam.<br>Be the right one when it counts.</p>
       <div class="legend">
         <div class="leg"><span class="chip ice"></span>ICE<small>smashes glass</small></div>
         <div class="leg"><span class="chip water"></span>WATER<small>flows through pipes</small></div>
         <div class="leg"><span class="chip steam"></span>STEAM<small>floats over spikes</small></div>
       </div>
     </div>
-    <div class="tap-hint" aria-hidden="true"><span class="finger">👆</span> HOLD TO PLAY</div>
-    <div class="title-best">BEST <strong id="best">0</strong></div>
+    <div class="tap-hint" aria-hidden="true">Tap to play</div>
+    <div class="title-best">Best <strong id="best">0</strong></div>
   </section>
 
   <!-- HUD -->
@@ -47,21 +47,21 @@
   <!-- Game over -->
   <section id="over" class="overlay menu" data-ui hidden>
     <div class="panel">
-      <div id="new-best" class="new-best" hidden>✦ NEW BEST ✦</div>
+      <div id="new-best" class="new-best" hidden>New best</div>
       <div id="death-line" class="death-line"></div>
-      <div class="label">SCORE</div>
+      <div class="label">Score</div>
       <div id="over-score" class="big">0</div>
       <div class="row">
-        <div class="stat"><div class="label">BEST</div><div id="over-best" class="mid">0</div></div>
-        <div class="stat"><div class="label">CLOSE CALLS</div><div id="over-close" class="mid">0</div></div>
+        <div class="stat"><div class="label">Best</div><div id="over-best" class="mid">0</div></div>
+        <div class="stat"><div class="label">Close calls</div><div id="over-close" class="mid">0</div></div>
       </div>
-      <button id="retry" class="btn primary" type="button">PLAY AGAIN</button>
-      <button id="share" class="btn ghost" type="button">SHARE</button>
-      <div class="hint">or hold anywhere</div>
+      <button id="retry" class="btn primary" type="button">Play again</button>
+      <button id="share" class="btn ghost" type="button">Share</button>
+      <div class="hint">or tap anywhere</div>
     </div>
   </section>
 
-  <button id="mute" class="icon-btn corner-btn" type="button" data-ui aria-label="Mute">🔊</button>
+  <button id="mute" class="icon-btn corner-btn" type="button" data-ui aria-label="Mute"><svg class="ico-on" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg><svg class="ico-off" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg></button>
 
   <script type="module" src="src/main.js"></script>
   <script src="../switcher.js" data-game="melt"></script>

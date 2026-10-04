@@ -4,7 +4,7 @@
 
 | Game | Folder | One line | Control |
 |---|---|---|---|
-| **MELT** | `melt/` | Hold to heat, release to cool. Be ice, water or steam at the right moment. | Hold |
+| **MELT** | `melt/` | Tap to change state. Be ice, water or steam at the right moment. | Tap |
 | **SKIP** | `skip/` | Skip a stone across a sunset lake. Tap when it kisses the water. Challenge friends by link; Game Center ready. | Tap |
 | **POP** | `pop/` | Pop the bubbles that match the colour. Three lives. | Tap |
 | **ORBIT** | `orbit/` | Tap to reverse. Dodge the red arcs, sweep up the gems. | Tap |
@@ -51,9 +51,9 @@ npm run build:web        # ios/GameBox/web
 
 # MELT 💧🔥
 
-**Hold to heat. Release to cool. Be the right state of matter.**
+**Tap to change state. Be the right one when it counts.**
 
-A one-finger hyper-casual runner with a mechanic that doesn't exist yet: your only control is a thermometer. Hold and your water drop boils into **steam** and floats over spikes. Let go and it cools back to **water** to flow through pipes. Keep cooling and it freezes into **ice** to smash glass. Geysers and cold vents shove your temperature when you least expect it.
+A one-tap runner: each tap cycles your drop ice → water → steam → ice. **Steam** floats over spikes, **water** flows through pipes, **ice** smashes glass, and beams block steam. Geysers and cold vents shove your temperature when you least expect it.
 
 Built entirely in this repo: zero dependencies, zero binary assets, every shape, colour and sound generated in code. The rules are one DOM-free module designed to port to Unity (C#) or Xcode (Swift). See [`docs/DESIGN.md`](docs/DESIGN.md) and [`docs/PORTING.md`](docs/PORTING.md).
 
@@ -74,13 +74,12 @@ Installable fullscreen PWA, works offline.
 
 | Input | Action |
 |------|--------|
-| Hold (touch / mouse / Space) | Heat up |
-| Release | Cool down |
+| Tap (touch / mouse / Space) | Next state |
 
 ## The loop
 
-1. You auto-run. A thermometer on the left shows three bands: ice, water, steam.
-2. Hold to heat, release to cool. Cross a band and you change form, with a burst, a sound and a bounce.
+1. You auto-run. Three marks in the floor show which state you are in.
+2. Tap to change state, in a fixed cycle. Each change has a burst, a sound and a bounce.
 3. Each obstacle lets exactly one kind of thing through. The first few of every type carry a label and the icon of the state that passes.
 4. Speed ramps, new obstacle types unlock, hazards start shoving your temperature. Named milestones mark your progress.
 5. Die and the end card tells you in one line what you were and what you needed. One tap to go again.

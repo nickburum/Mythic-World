@@ -72,15 +72,14 @@ async function renderScreens(browser) {
   await page.screenshot({ path: resolve(ROOT, 'art/screens/ice.png') });
   console.log('art/screens/ice.png');
 
-  // Let go of the autopilot and hold forever → steam into a beam → game over.
-  await page.evaluate(() => { const a = window.__melt; a.autopilot = false; a.holding = true; });
+  // Let go of the autopilot: with no taps the next mismatch ends the run.
+  await page.evaluate(() => { const a = window.__melt; a.autopilot = false; });
   await page.waitForFunction(() => window.__melt.state === 'over', null, { timeout: 60000 });
   await page.waitForTimeout(600);
   await page.screenshot({ path: resolve(ROOT, 'art/screens/gameover.png') });
   console.log('art/screens/gameover.png');
 
-  // Real input path: a touch away from the panel restarts and heats while held.
-  await page.evaluate(() => { window.__melt.holding = false; });
+  // Real input path: a touch away from the panel restarts.
   await page.waitForTimeout(300);
   await page.touchscreen.tap(40, 120);
   await page.waitForTimeout(100);

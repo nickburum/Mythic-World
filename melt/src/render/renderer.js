@@ -265,7 +265,7 @@ export class Renderer {
   }
 
   /**
-   * @param {object} p { phase, altitude, holding, time, morph (0..1 since last change), temp }
+   * @param {object} p { phase, altitude, time, morph (0..1 since last change) }
    */
   drawPlayer(p) {
     const { ctx } = this;
@@ -336,45 +336,23 @@ export class Renderer {
   /* ───────────── gauge ───────────── */
 
   /** Horizontal thermometer in the floor strip, out of the obstacle lane. */
-  drawGauge(temp, holding) {
+  /** Three centred state marks in the floor strip: the active one is filled. */
+  drawGauge(phase, time) {
     const { ctx } = this;
-    const left = 64, right = Math.min(this.viewWorldW(), CONFIG.WORLD_W) - 28;
-    const y = CONFIG.FLOOR_Y + 52, h = 14;
-    const w = right - left;
-    const xFor = (t) => left + (t / 100) * w;
+    const cx = Math.min(this.viewWorldW(), CONFIG.WORLD_W) / 2, y = CONFIG.FLOOR_Y + 56, gap = 64;
+    const phases = ['ice', 'water', 'steam'];
     ctx.save();
-    // tube
-    ctx.fillStyle = 'rgba(0,0,0,0.38)'; this.roundRect(left - 12, y - h / 2 - 5, w + 24, h + 10, 12); ctx.fill();
-    // bands
-    const bands = [[0, CONFIG.ICE_MAX, PHASE_COLORS.ice.fill], [CONFIG.ICE_MAX, CONFIG.STEAM_MIN, PHASE_COLORS.water.fill], [CONFIG.STEAM_MIN, 100, '#ffb36b']];
-    for (const [a, b, col] of bands) {
-      ctx.globalAlpha = 0.3; ctx.fillStyle = col;
-      ctx.fillRect(xFor(a), y - h / 2, xFor(b) - xFor(a), h);
-    }
-    ctx.globalAlpha = 1;
-    // threshold ticks
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    for (const t of [CONFIG.ICE_MAX, CONFIG.STEAM_MIN]) ctx.fillRect(xFor(t) - 1, y - h / 2 - 7, 2, h + 14);
-    // mercury
-    const g = ctx.createLinearGradient(left, 0, right, 0);
-    g.addColorStop(0, '#9fe3ff'); g.addColorStop(0.5, '#3aa7ff'); g.addColorStop(1, '#ff8a5b');
-    ctx.fillStyle = g;
-    this.roundRect(left - 4, y - h / 2 + 3, xFor(temp) - left + 4, h - 6, 4); ctx.fill();
-    // bulb (left, cold end) lights up while heating
-    ctx.fillStyle = holding ? '#ff8a5b' : '#3aa7ff';
-    ctx.beginPath(); ctx.arc(left - 22, y, 15, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(left - 27, y - 5, 4.5, 0, TAU); ctx.fill();
-    if (holding) {
-      // little flame
-      ctx.fillStyle = '#ffd36b';
-      ctx.beginPath(); ctx.moveTo(left - 29, y + 2); ctx.quadraticCurveTo(left - 22, y - 16, left - 15, y + 2); ctx.quadraticCurveTo(left - 22, y + 8, left - 29, y + 2); ctx.fill();
-    }
-    // marker
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xFor(temp), y, 6, 0, TAU); ctx.fill();
-    // phase icons above the bands
-    this.drawPhaseIcon('ice', xFor(CONFIG.ICE_MAX / 2), y - 26, 6);
-    this.drawPhaseIcon('water', xFor((CONFIG.ICE_MAX + CONFIG.STEAM_MIN) / 2), y - 26, 6);
-    this.drawPhaseIcon('steam', xFor((CONFIG.STEAM_MIN + 100) / 2), y - 26, 6);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - gap, y); ctx.lineTo(cx + gap, y); ctx.stroke();
+    phases.forEach((p, i) => {
+      const x = cx + (i - 1) * gap, active = p === phase;
+      const r = active ? 11 + Math.sin(time * 6) * 0.8 : 7;
+      ctx.fillStyle = active ? PHASE_COLORS[p].fill : '#0f172a';
+      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = active ? PHASE_COLORS[p].fill : 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+      this.drawPhaseIcon(p, x, y + 26, 6);
+    });
     ctx.restore();
   }
 
