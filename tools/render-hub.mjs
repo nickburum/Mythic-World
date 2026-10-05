@@ -41,6 +41,8 @@ async function renderScreens(browser) {
   if (!home) errors.push('back did not return home with SKIP as the hero and four cards');
   await shot(page, 'home-hero');
   await page.click('#open-settings'); await page.waitForTimeout(400); await shot(page, 'settings');
+  const hasReplay = await page.evaluate(() => !!document.getElementById('replay-tutorials'));
+  if (!hasReplay) errors.push('settings lacks the tutorial replay button');
   await page.click('.sheet .btn.primary');
   await page.click('#hero-btn'); await page.waitForTimeout(300); await page.click('#back'); await page.waitForTimeout(250);
   // every game opens

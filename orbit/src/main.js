@@ -1,6 +1,8 @@
 /** ORBIT — controller. One tap: reverse. */
 import { OrbitGame, autopilot } from './core/orbit.js';
 import { Renderer } from './render/renderer.js';
+import { attachExtras } from '../../src/extras.js';
+import { song, steps } from './extras-config.js';
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem('orbit.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem('orbit.' + k, JSON.stringify(v)); } catch {} } };
 const vib = (p, on) => { if (on && navigator.vibrate) navigator.vibrate(p); };
@@ -31,30 +33,44 @@ class App {
     this.best = LS.get('best', 0); this.games = LS.get('games', 0); this.muted = LS.get('muted', false); this.haptics = LS.get('haptics', true); this.sfx.setMuted(this.muted);
     this.ui = { title: $('title'), hud: $('hud'), over: $('over'), score: $('score'), best: $('best'), overScore: $('over-score'), overBest: $('over-best'), newBest: $('new-best'), mute: $('mute') };
     this.ui.best.textContent = this.best; this.ui.mute.classList.toggle('muted', this.muted);
+    this.bindGame(); this.wireUi();
+  }
+  bindGame() {
     const g = this.game;
     g.on('collect', (e) => { const [x, y] = this.r.pt(e.gem.angle); this.fx.burst(x, y, '#ffe66b'); this.sfx.gem(e.score); vib(10, this.haptics); if (this.ui.score) this.ui.score.textContent = e.score; });
     g.on('reverse', () => { this.sfx.reverse(); vib(6, this.haptics); const [x, y] = this.r.pt(g.angle); this.fx.burst(x, y, '#7df0ff', 8, 120); });
     g.on('solid', () => { this.sfx.warn(); });
     g.on('milestone', (m) => this.fx.pop(m.name.toUpperCase(), this.r.w / 2, this.r.h * 0.2, { size: 26, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }));
     g.on('gameover', (e) => this.onOver(e));
+  }
+  wireUi() {
     this.canvas.addEventListener('pointerdown', (e) => this.press(e), { passive: false });
     this.canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
     window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); this.press(e); } });
     $('play').addEventListener('click', () => { this.click(); this.start(); }); $('retry').addEventListener('click', () => { this.click(); this.start(); }); $('to-title').addEventListener('click', () => { this.click(); this.toTitle(); });
-    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
+    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.extras.setMuted(this.muted); this.extras.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
     window.addEventListener('resize', () => this.r.resize()); document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
+    this.extras = attachExtras({ id: 'orbit', name: 'ORBIT', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx });
+    this.extras.setMuted(this.muted);
     window.__orbit = this; requestAnimationFrame((t) => this.frame(t));
   }
-  click() { this.sfx.unlock(); this.sfx.tap(); }
+  click() { this.sfx.unlock(); this.extras.unlock(); this.sfx.tap(); }
   setState(s) { this.state = s; this.stateTime = 0; document.body.dataset.state = s; this.ui.title.hidden = s !== 'title'; this.ui.hud.hidden = s !== 'play'; this.ui.over.hidden = s !== 'over'; }
-  toTitle() { this.game.reset(); this.fx.clear(); this.trail.length = 0; this.setState('title'); }
-  start() { this.sfx.unlock(); this.game.reset(); this.fx.clear(); this.trail.length = 0; this.setState('play'); this.ui.score.textContent = '0'; }
-  press(e) { if (e.target && e.target.closest && e.target.closest('[data-ui]')) return; if (e.preventDefault) e.preventDefault(); this.sfx.unlock(); if (this.state === 'title') { this.start(); return; } if (this.state === 'over') { if (this.stateTime > 0.6) this.start(); return; } this.game.tap(); }
+  toTitle() { this.game.reset(); this.fx.clear(); this.trail.length = 0; this.setState('title'); this.extras.onTitle(); }
+  start(seed) {
+    seed = seed ?? this.extras.currentSeed(); this.extras.onStart(seed);
+    this.seed = seed === undefined ? this.extras.newSeed() : seed;
+    this.sfx.unlock(); this.extras.unlock();
+    this.game = new OrbitGame({ seed: this.seed }); this.bindGame(); this.fx.clear(); this.trail.length = 0; this.setState('play'); this.ui.score.textContent = '0';
+  }
+  revive() { if (!this.game.revive()) return false; this.fx.clear(); this.setState('play'); return true; }
+  press(e) { if (e.target && e.target.closest && e.target.closest('[data-ui]')) return; if (e.preventDefault) e.preventDefault(); this.sfx.unlock(); if (this.state === 'title') { this.extras.beforeStart(() => this.start()); return; } if (this.state === 'over') { if (this.stateTime > 0.6) this.start(); return; } this.game.tap(); }
   onOver(e) {
     this.sfx.crash(); vib([40, 40, 60], this.haptics); const [x, y] = this.r.pt(this.game.angle); this.fx.burst(x, y, '#fff', 30, 320); this.fx.burst(x, y, '#ff5a6e', 20, 200);
     this.games++; LS.set('games', this.games); const isBest = e.score > this.best; if (isBest) { this.best = e.score; LS.set('best', this.best); }
     this.ui.overScore.textContent = e.score; this.ui.overBest.textContent = this.best; this.ui.best.textContent = this.best; this.ui.newBest.hidden = !isBest || e.score === 0;
-    setTimeout(() => this.setState('over'), 700);
+    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score); }, 700);
   }
   frame(now) {
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); this.last = now; this.time += dt; this.stateTime += dt; const g = this.game;

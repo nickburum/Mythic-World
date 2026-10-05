@@ -87,3 +87,25 @@ body[data-state="play"] .corner-btn, body[data-state="flight"] .corner-btn, body
 }
 @media (max-height: 700px) { .title-block { margin-top: 3vh; } .logo { font-size: clamp(56px, 17vw, 88px); } .tagline { margin-top: 6px; font-size: 14px; } .score { font-size: 52px; } .big { font-size: 54px; } .btn { min-height: 52px; } }
 @media (prefers-reduced-motion: reduce) { .menu, .menu .panel, .tap-hint { animation: none; } }
+
+/* ─── shared extras: tutorial, challenge banner, versus, toast ─── */
+.tutorial { z-index: 30; background: rgba(0,0,0,.45); justify-content: flex-end; padding: 0; }
+.tutorial .panel { text-align: center; gap: 14px; }
+.tut-dots { display: flex; justify-content: center; gap: 6px; }
+.tut-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); }
+.tut-dots i.on { background: var(--ink); }
+.tut-art { height: 140px; display: grid; place-items: center; }
+.tut-art svg { width: 160px; height: 120px; }
+.tut-title { font-size: 20px; font-weight: 900; letter-spacing: .02em; }
+.tut-text { margin: 0 auto; max-width: 300px; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.skip-tut { border: 0; min-height: 44px; color: var(--ink-3); font-size: 11px; }
+.banner { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; width: min(100%, 360px); padding: 12px 14px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--surface); text-align: left; pointer-events: auto; }
+.banner[hidden] { display: none; }
+.banner-text b { display: block; font-size: 14px; }
+.banner-text small { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.btn.small { width: auto; min-height: 44px; padding: 8px 16px; font-size: 12px; }
+.versus { padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); font-size: 14px; font-weight: 700; }
+.versus[hidden] { display: none; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 28px); transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 999px; background: #fff; color: #0f172a; font-weight: 800; font-size: 12px; letter-spacing: .06em; }
+.toast[hidden] { display: none; }
+@media (min-width: 640px) and (min-height: 600px) { .tutorial { justify-content: center; padding: 20px; } }

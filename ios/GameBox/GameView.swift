@@ -16,6 +16,8 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
     private var webView: WKWebView!
     private let gameCenter = GameCenterBridge()
     private let haptics = HapticsBridge()
+    private let cloud = CloudBridge()
+    private let adsBridge = AdsBridge()
     private var links = Set<AnyCancellable>()
 
     override func viewDidLoad() {
@@ -28,6 +30,8 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         config.setURLSchemeHandler(BundleSchemeHandler(folder: "web"), forURLScheme: Self.scheme)
         config.userContentController.add(gameCenter, name: "gameCenter")
         config.userContentController.add(haptics, name: "haptics")
+        config.userContentController.add(cloud, name: "cloud")
+        config.userContentController.add(adsBridge, name: "ads")
         // iOS Safari has no Vibration API; games call the `haptics` handler when present.
         config.userContentController.addUserScript(WKUserScript(source: "window.__gameBoxNative = { platform: 'ios' };", injectionTime: .atDocumentStart, forMainFrameOnly: false))
 
@@ -45,6 +49,9 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
 
         gameCenter.webView = webView
         gameCenter.presenter = self
+        cloud.webView = webView
+        adsBridge.webView = webView
+        adsBridge.presenter = self
 
         webView.load(URLRequest(url: URL(string: "\(Self.scheme)://\(Self.host)/index.html")!))
 

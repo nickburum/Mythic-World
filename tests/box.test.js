@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GAMES, byId, readBest, formatBest, applySettings, SETTING_KEYS } from '../src/games.js';
+import { GAMES, byId, readBest, formatBest, applySettings, SETTING_KEYS, gcScore } from '../src/games.js';
 
 const store = () => { const m = new Map(); return { m, getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, v) }; };
 
@@ -36,4 +36,10 @@ test('box settings fan out to every game in its own encoding', () => {
   applySettings({ sound: true, haptics: false }, s.setItem);
   assert.equal(s.getItem('melt.muted'), 'false');
   assert.equal(s.getItem('skip.quality'), '"auto"');
+});
+
+test('every game has a Game Center leaderboard and integer scores', () => {
+  for (const g of GAMES) assert.match(g.leaderboardID, /^com\.mythicworld\./);
+  assert.equal(gcScore(byId('skip'), 123.45), 1235);
+  assert.equal(gcScore(byId('pop'), 42), 42);
 });

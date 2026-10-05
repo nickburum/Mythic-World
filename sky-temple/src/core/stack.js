@@ -11,6 +11,7 @@
  * bottom y, height h.
  */
 import { CONFIG } from './config.js';
+import { seededRandom } from '../../../src/challenge.js';
 
 /** @typedef {'x'|'z'} Axis */
 
@@ -59,7 +60,8 @@ export class StackGame {
    */
   constructor(opts = {}) {
     this.config = { ...CONFIG, ...(opts.config || {}) };
-    this.random = opts.random || Math.random;
+    this.seed = opts.seed ?? null;
+    this.random = opts.random || (this.seed !== null ? seededRandom(this.seed) : Math.random);
     /** @type {Record<string, Function[]>} */
     this.listeners = {};
     this.reset();
@@ -105,6 +107,18 @@ export class StackGame {
     this.moving = null;
     this.spawnMoving();
     this.emit('reset', this);
+  }
+
+  /** Start over on a seeded game (same starting sides for everyone with the seed). */
+  resetWithSeed(seed) { this.seed = seed >>> 0; this.random = seededRandom(this.seed); this.reset(); }
+
+  /** Continue after a miss: a fresh stone slides in on top of the tower, score kept. */
+  revive() {
+    if (!this.over) return false;
+    this.over = false; this.combo = 0;
+    this.spawnMoving();
+    this.emit('revive', this);
+    return true;
   }
 
   /** Top-most placed block. */

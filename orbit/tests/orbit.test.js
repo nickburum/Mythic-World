@@ -43,3 +43,11 @@ test('the autopilot survives 90 seconds on 8 seeds', () => {
     assert.ok(g.score >= 20, `seed ${seed} only ${g.score}`);
   }
 });
+
+test('revive clears the ring and resumes', () => {
+  const g = new OrbitGame({ seed: 9 });
+  g.blocks = [{ id: 1, angle: g.angle, half: 0.4, age: CONFIG.BLOCK_WARN, state: 'solid' }]; g.blockIn = 99; g.gemIn = 99;
+  g.update(DT); assert.ok(g.over);
+  assert.ok(g.revive()); assert.ok(!g.over); assert.equal(g.blocks.length, 0);
+  for (let t = 0; t < 1; t += DT) g.update(DT); assert.ok(!g.over);
+});

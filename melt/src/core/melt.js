@@ -6,6 +6,7 @@
  * one set of phases through. Hazards shove the phase one step.
  */
 import { CONFIG } from './config.js';
+import { seededRandom } from '../../../src/challenge.js';
 
 export const PHASE = Object.freeze({ ICE: 'ice', WATER: 'water', STEAM: 'steam' });
 export const CYCLE = ['ice', 'water', 'steam'];
@@ -30,9 +31,21 @@ export const OBSTACLES = Object.freeze({
 export class MeltGame {
   constructor(opts = {}) {
     this.config = { ...CONFIG, ...(opts.config || {}) };
-    this.random = opts.random || Math.random;
+    this.seed = opts.seed ?? null;
+    this.random = opts.random || (this.seed !== null ? seededRandom(this.seed) : Math.random);
     this.listeners = {};
     this.reset();
+  }
+  /** Start over on a seeded course (same obstacles for everyone with the seed). */
+  resetWithSeed(seed) { this.seed = seed >>> 0; this.random = seededRandom(this.seed); this.reset(); }
+  /** Continue after a death: clear the road ahead and keep the score. */
+  revive() {
+    if (!this.over) return false;
+    const c = this.config;
+    this.obstacles = this.obstacles.filter(o => o.x > c.PLAYER_X + 320);
+    this.over = false; this.deathPhase = null; this.lastPhaseChange = this.time;
+    this.emit('revive', this);
+    return true;
   }
   on(e, fn) { (this.listeners[e] ||= []).push(fn); return () => this.off(e, fn); }
   off(e, fn) { const l = this.listeners[e]; if (!l) return; const i = l.indexOf(fn); if (i >= 0) l.splice(i, 1); }

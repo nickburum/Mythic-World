@@ -214,6 +214,17 @@ export class SkipGame {
     this.emit('skip', this.lastSkip);
   }
 
+  /** Continue after sinking: the stone is back in the air with a fresh throw's speed, pads just ahead are cleared. */
+  revive() {
+    if (this.phase !== 'sunk') return false;
+    const c = this.config, s = this.stone;
+    this.pads = this.pads.filter(p => p.x > s.x + 28);
+    s.vx = c.THROW_VX_MIN + (c.THROW_VX_MAX - c.THROW_VX_MIN) * 0.5; s.vy = c.THROW_VY; s.y = c.HAND_HEIGHT * 0.5;
+    this.phase = 'flight'; this.endReason = null; this.tapAt = -10; this.tapLead = null;
+    this.emit('revive', this);
+    return true;
+  }
+
   end(reason, pad = null) {
     this.phase = 'sunk';
     this.endReason = reason;

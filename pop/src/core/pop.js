@@ -98,6 +98,14 @@ export class PopGame {
     return { hit: true, bubble: best, kind: 'wrong' };
   }
 
+  /** Continue after game over: two lives back, a clear screen, score kept. */
+  revive() {
+    if (!this.over) return false;
+    this.over = false; this.lives = 2; this.bubbles = []; this.spawnIn = 0.9; this.combo = 0;
+    this.emit('revive', this);
+    return true;
+  }
+
   changeTarget() {
     const c = this.config;
     let t = Math.floor(this.random() * (c.COLORS - 1)); if (t >= this.target) t++;

@@ -4,6 +4,11 @@
 # Installs XcodeGen if needed, assembles the web build, generates GameBox.xcodeproj and opens it.
 set -euo pipefail
 cd "$(dirname "$0")"
+# Optional: bash ios/bootstrap.sh --team ABCDE12345 --bundle com.you.gamebox   (writes them into project.yml once)
+while [ $# -gt 0 ]; do case "$1" in
+  --team) sed -i '' "s/DEVELOPMENT_TEAM: \"[A-Z0-9]*\"/DEVELOPMENT_TEAM: \"$2\"/" project.yml; shift 2;;
+  --bundle) sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER: .*/PRODUCT_BUNDLE_IDENTIFIER: $2/; s/CFBundleURLName: .*/CFBundleURLName: $2/" project.yml; shift 2;;
+  *) shift;; esac; done
 if ! command -v xcodegen >/dev/null 2>&1; then
   if command -v brew >/dev/null 2>&1; then brew install xcodegen; else echo "Install Homebrew (https://brew.sh) or XcodeGen (https://github.com/yonaskolb/XcodeGen) first."; exit 1; fi
 fi

@@ -108,6 +108,13 @@ export class OrbitGame {
       this.checkMilestone();
     }
   }
+  /** Continue after a crash: the ring is cleared, score kept. */
+  revive() {
+    if (!this.over) return false;
+    this.over = false; this.blocks = []; this.blockIn = 1.6;
+    this.emit('revive', this);
+    return true;
+  }
   checkMilestone() { const ms = this.config.MILESTONES; while (this.milestoneIdx < ms.length && this.score >= ms[this.milestoneIdx].score) { this.emit('milestone', ms[this.milestoneIdx]); this.milestoneIdx++; } }
 
   /** Nearest blocker ahead in the direction of travel: { block, dist } or null. */

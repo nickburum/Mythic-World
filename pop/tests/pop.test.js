@@ -46,3 +46,9 @@ test('a steady player (one tap every 0.2 s) survives 60 seconds and scores well'
   for (let t = 0; t < 60; t += DT) { const tp = autopilot(g); if (tp && t - lastTap >= 0.2) { g.tap(tp.x, tp.y); lastTap = t; } g.update(DT); }
   assert.ok(!g.over, `died at ${g.score}`); assert.ok(g.score >= 20, `score ${g.score}`);
 });
+
+test('revive gives two lives and a clear screen', () => {
+  const g = new PopGame({ seed: 8 });
+  for (let i = 0; i < 3; i++) { g.bubbles = [{ id: i, x: 100, y: 300, r: 30, color: (g.target + 1) % CONFIG.COLORS, vy: 80, wob: 0, wobAmp: 0 }]; g.tap(100, 300); }
+  assert.ok(g.over); assert.ok(g.revive()); assert.ok(!g.over); assert.equal(g.lives, 2); assert.equal(g.bubbles.length, 0); assert.equal(g.revive(), false);
+});

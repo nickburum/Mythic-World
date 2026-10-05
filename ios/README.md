@@ -2,7 +2,12 @@
 
 Everything in the box is web code. The iOS app is a thin SwiftUI shell that serves the
 web build from the bundle through a custom URL scheme (`gamebox://app/…`) in one
-WKWebView, plus two native bridges: **Game Center** (leaderboards) and **haptics**.
+WKWebView, plus four native bridges: **Game Center** (leaderboards for all five games),
+**iCloud Key-Value Storage** (scores survive delete + reinstall), **rewarded ads**
+(AdMob, "Continue by watching an ad", no banners) and **haptics**.
+
+**New to the Apple side?** Start with [`APPLE-SETUP.md`](APPLE-SETUP.md): enrolment, Team ID,
+App ID capabilities, App Store Connect, Game Center leaderboards, AdMob, TestFlight, submission.
 
 ## 0. Prerequisites (once)
 - A Mac with **Xcode 15+** (App Store) and the **iOS platform** installed.
@@ -59,6 +64,11 @@ environment variables it needs (App Store Connect API key).
 | `webkit.messageHandlers.gameCenter.postMessage({type:'authenticate'})` | `GameCenterBridge` | GKLocalPlayer sign-in, calls back `GameCenterBridge.onAuth` |
 | `…({type:'submit', leaderboardID, score})` | | `GKLeaderboard.submitScore` |
 | `…({type:'show', leaderboardID, scope})` | | Presents `GKGameCenterViewController` (global or friends) |
+| `webkit.messageHandlers.cloud.postMessage({type:'getAll'|'set'|'remove', …})` | `CloudBridge` | `NSUbiquitousKeyValueStore`; answers with `CloudBridge.onSnapshot({…})` |
+| `webkit.messageHandlers.ads.postMessage({type:'load'|'show'})` | `AdsBridge` | `GADRewardedAd`; answers `AdsBridge.onReady(bool)` / `onResult({rewarded})` |
+
+Native callbacks are evaluated in the hub (main frame); `src/box.js` forwards them to the game
+currently running in the iframe.
 
 Deep links: `gamebox://play/skip` opens a game; a SKIP challenge link rewritten as
 `gamebox://skip/#c=…` opens that challenge. Universal Links (https) can be added later with an

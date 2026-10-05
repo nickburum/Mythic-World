@@ -8,15 +8,15 @@
  */
 export const GAMES = [
   { id: 'melt', name: 'MELT', tagline: 'Tap to change state.', path: 'melt/', accent: '#3aa7ff', accent2: '#ff8a5b',
-    best: { key: 'melt.best', kind: 'int', unit: '' }, control: 'Tap' },
+    best: { key: 'melt.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.melt.score' },
   { id: 'skip', name: 'SKIP', tagline: 'Tap when the stone kisses the water.', path: 'skip/', accent: '#ffb36b', accent2: '#5b6fd6',
     best: { key: 'skip.board', kind: 'board', unit: ' m' }, control: 'Tap', leaderboardID: 'com.mythicworld.skip.distance' },
   { id: 'pop', name: 'POP', tagline: 'Pop the bubbles that match.', path: 'pop/', accent: '#ff7ab6', accent2: '#7df0ff',
-    best: { key: 'pop.best', kind: 'int', unit: '' }, control: 'Tap' },
+    best: { key: 'pop.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.pop.score' },
   { id: 'orbit', name: 'ORBIT', tagline: 'Tap to reverse. Dodge. Collect.', path: 'orbit/', accent: '#7df0ff', accent2: '#b98cff',
-    best: { key: 'orbit.best', kind: 'int', unit: '' }, control: 'Tap' },
+    best: { key: 'orbit.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.orbit.score' },
   { id: 'sky-temple', name: 'SKY TEMPLE', tagline: 'Stack stones to the gods.', path: 'sky-temple/', accent: '#ff9a5b', accent2: '#4ea3ff',
-    best: { key: 'skytemple.best', kind: 'int', unit: '' }, control: 'Tap' },
+    best: { key: 'skytemple.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.skytemple.score' },
 ];
 
 export const byId = (id) => GAMES.find(g => g.id === id) || null;
@@ -54,3 +54,6 @@ export function applySettings(settings, setItem) {
 
 /** Clear every game's scores (not settings). */
 export const SCORE_KEYS = ['melt.best', 'melt.games', 'skip.board', 'skip.friends', 'skip.games', 'pop.best', 'pop.games', 'orbit.best', 'orbit.games', 'skytemple.best', 'skytemple.games'];
+
+/** Game Center score for a game's best (integers only; SKIP submits decimetres). */
+export function gcScore(game, best) { return game.best.kind === 'board' ? Math.round(best * 10) : Math.round(best); }

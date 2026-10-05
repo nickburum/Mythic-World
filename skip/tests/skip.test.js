@@ -246,3 +246,13 @@ test('friends board keeps one best row per tag, sorted', () => {
   assert.deepEqual(fb.top().map(e => [e.tag, e.score]), [['SAM', 90], ['AMY', 80]]);
   assert.equal(new FriendsBoard(mem).top().length, 2, 'persists through the store');
 });
+
+test('revive puts a sunk stone back in flight at the same distance', () => {
+  const g = new SkipGame({ random: rng(14), config: { PAD_START: 1e9 } });
+  play(g, 0.5, never); assert.equal(g.phase, 'sunk');
+  const d = g.distance;
+  assert.ok(g.revive()); assert.equal(g.phase, 'flight'); assert.ok(g.stone.vx > CONFIG.MIN_SPEED);
+  for (let t = 0; t < 2; t += DT) g.update(DT);
+  assert.ok(g.distance > d + 5, 'keeps skipping after the revive');
+  assert.equal(g.revive(), false);
+});

@@ -2,6 +2,8 @@
 import { PopGame, CONFIG, autopilot } from './core/pop.js';
 import { Renderer, PALETTE } from './render/renderer.js';
 import { Effects } from './render/effects.js';
+import { attachExtras } from '../../src/extras.js';
+import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem('pop.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem('pop.' + k, JSON.stringify(v)); } catch {} } };
@@ -28,27 +30,39 @@ class App {
     this.sfx.setMuted(this.muted); this.autopilot = false; this.pulse = 0; this.lastHud = {};
     this.ui = { title: $('title'), hud: $('hud'), over: $('over'), score: $('score'), lives: $('lives'), target: $('target-name'), best: $('best'), overScore: $('over-score'), overBest: $('over-best'), overCombo: $('over-combo'), newBest: $('new-best'), mute: $('mute') };
     this.ui.best.textContent = this.best; this.ui.mute.classList.toggle('muted', this.muted);
-    const g = this.game;
-    g.on('pop', (e) => this.onPop(e)); g.on('wrong', (e) => this.onWrong(e)); g.on('life', (e) => this.onLife(e)); g.on('target', () => this.onTarget()); g.on('gameover', (e) => this.onOver(e)); g.on('milestone', (m) => this.fx.pop(m.name.toUpperCase(), CONFIG.WORLD_W / 2, 200, { size: 28, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }));
+    this.bindGame();
     this.canvas.addEventListener('pointerdown', (e) => this.press(e), { passive: false });
     this.canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
     $('play').addEventListener('click', () => { this.click(); this.start(); });
     $('retry').addEventListener('click', () => { this.click(); this.start(); });
     $('to-title').addEventListener('click', () => { this.click(); this.toTitle(); });
-    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
+    this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.extras.setMuted(this.muted); this.extras.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
     window.addEventListener('resize', () => this.r.resize());
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
+    this.extras = attachExtras({ id: 'pop', name: 'POP', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx });
+    this.extras.setMuted(this.muted);
     window.__pop = this;
     requestAnimationFrame((t) => this.frame(t));
   }
-  click() { this.sfx.unlock(); this.sfx.tap(); }
+  bindGame() {
+    const g = this.game;
+    g.on('pop', (e) => this.onPop(e)); g.on('wrong', (e) => this.onWrong(e)); g.on('life', (e) => this.onLife(e)); g.on('target', () => this.onTarget()); g.on('gameover', (e) => this.onOver(e)); g.on('milestone', (m) => this.fx.pop(m.name.toUpperCase(), CONFIG.WORLD_W / 2, 200, { size: 28, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }));
+  }
+  click() { this.sfx.unlock(); this.extras.unlock(); this.sfx.tap(); }
   setState(s) { this.state = s; this.stateTime = 0; document.body.dataset.state = s; this.ui.title.hidden = s !== 'title'; this.ui.hud.hidden = s !== 'play'; this.ui.over.hidden = s !== 'over'; }
-  toTitle() { this.game.reset(); this.fx.clear(); this.setState('title'); }
-  start() { this.sfx.unlock(); this.game.reset(); this.fx.clear(); this.setState('play'); this.hud(true); }
+  toTitle() { this.game.reset(); this.fx.clear(); this.setState('title'); this.extras.onTitle(); }
+  start(seed) {
+    seed = seed ?? this.extras.currentSeed(); this.extras.onStart(seed);
+    this.seed = seed === undefined ? this.extras.newSeed() : seed;
+    this.sfx.unlock(); this.extras.unlock();
+    this.game = new PopGame({ seed: this.seed }); this.bindGame(); this.fx.clear(); this.setState('play'); this.hud(true);
+  }
+  revive() { if (!this.game.revive()) return false; this.fx.clear(); this.setState('play'); this.hud(true); return true; }
   press(e) {
     if (e.target.closest && e.target.closest('[data-ui]')) return;
     e.preventDefault(); this.sfx.unlock();
-    if (this.state === 'title') { this.start(); return; }
+    if (this.state === 'title') { this.extras.beforeStart(() => this.start()); return; }
     if (this.state === 'over') { if (this.stateTime > 0.6) this.start(); return; }
     const [x, y] = this.r.toWorld(e.clientX, e.clientY);
     const res = this.game.tap(x, y);
@@ -62,7 +76,7 @@ class App {
     this.sfx.over(); vib([40, 40, 60], this.haptics); this.games++; LS.set('games', this.games);
     const isBest = e.score > this.best; if (isBest) { this.best = e.score; LS.set('best', this.best); }
     this.ui.overScore.textContent = e.score; this.ui.overBest.textContent = this.best; this.ui.best.textContent = this.best; this.ui.overCombo.textContent = `best combo ×${e.bestCombo}`; this.ui.newBest.hidden = !isBest || e.score === 0;
-    setTimeout(() => this.setState('over'), 700);
+    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score); }, 700);
   }
   hud(force) {
     const g = this.game;

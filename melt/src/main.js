@@ -4,6 +4,8 @@
  */
 import { MeltGame, autopilot } from './core/melt.js';
 import { PHASE_TEMP } from './core/palette.js';
+import { attachExtras } from '../../src/extras.js';
+import { song, steps } from './extras-config.js';
 import { CONFIG } from './core/config.js';
 import { Renderer } from './render/renderer.js';
 import { Effects } from './render/effects.js';
@@ -64,6 +66,9 @@ class App {
     window.addEventListener('resize', () => this.onResize());
     window.addEventListener('orientationchange', () => this.onResize());
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
+    this.extras = attachExtras({ id: 'melt', name: 'MELT', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx });
+    this.extras.setMuted(this.muted);
     window.__melt = this;
     requestAnimationFrame((t) => this.frame(t));
   }
@@ -82,7 +87,7 @@ class App {
 
   bindUi() {
     bindTap(this.canvas, () => this.press());
-    this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.sfx.tap(); this.start(); });
+    this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.extras.unlock(); this.sfx.tap(); this.start(); });
     this.ui.share.addEventListener('click', () => this.share());
     this.ui.mute.addEventListener('click', () => this.toggleMute());
     if (!navigator.share) this.ui.share.hidden = true;
@@ -104,14 +109,16 @@ class App {
   }
 
   press() {
-    this.sfx.unlock();
-    if (this.state === STATE.TITLE) { this.start(); return; }
+    this.sfx.unlock(); this.extras.unlock();
+    if (this.state === STATE.TITLE) { this.extras.beforeStart(() => this.start()); return; }
     if (this.state === STATE.OVER && this.stateTime > RETRY_LOCKOUT) { this.sfx.tap(); this.start(); return; }
     if (this.state === STATE.PLAYING) this.game.tap();
   }
 
-  start() {
-    this.game.reset();
+  start(seed) {
+    seed = seed ?? this.extras.currentSeed();
+    this.extras.onStart(seed);
+    if (seed !== undefined) this.game.resetWithSeed(seed); else this.game.resetWithSeed(this.extras.newSeed());
     this.game.setViewWidth(this.renderer.viewWorldW());
     this.fx.clear();
     this.shownTemp = PHASE_TEMP[this.game.phase];
@@ -134,6 +141,14 @@ class App {
     const d = this.death;
     this.ui.deathLine.textContent = d ? (DEATH_LINES[`${d.obstacle.type}:${d.phase}`] || '') : '';
     this.setState(STATE.OVER);
+    this.extras.onOver(score);
+  }
+
+  /** Rewarded continue: back into the run where we died. */
+  revive() {
+    if (!this.game.revive()) return false;
+    this.fx.clear(); this.setState(STATE.PLAYING); this.ui.deathLine.textContent = '';
+    return true;
   }
 
   /* ───────────── game events ───────────── */
@@ -236,7 +251,7 @@ class App {
 
   toggleMute() {
     this.muted = !this.muted; storage.set(KEYS.MUTED, this.muted);
-    this.sfx.setMuted(this.muted); this.sfx.unlock(); this.applyMuteIcon();
+    this.sfx.setMuted(this.muted); this.sfx.unlock(); this.extras.setMuted(this.muted); this.extras.unlock(); this.applyMuteIcon();
     if (!this.muted) this.sfx.tap();
   }
   applyMuteIcon() {

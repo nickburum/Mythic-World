@@ -23,17 +23,55 @@ async function renderScreens(browser) {
   const errors = [], shot = async (p, n) => { await p.screenshot({ path: resolve(ROOT, `art/screens/${n}.png`) }); console.log(`art/screens/${n}.png`); };
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   page.on('pageerror', e => errors.push(String(e))); page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); }); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(BASE); await page.waitForFunction(() => !!window.__pop); await page.waitForTimeout(1500);
+  await page.goto(BASE + '?testads=1'); await page.waitForFunction(() => !!window.__pop); await page.waitForTimeout(1500);
   await shot(page, 'title');
-  await page.evaluate(() => { const a = window.__pop; a.start(); a.autopilot = true; });
+  // first play: tapping the title shows the tutorial, then starts the game
+  await page.touchscreen.tap(195, 300); await page.waitForTimeout(400);
+  const tut = await page.evaluate(() => !!document.querySelector('.tutorial'));
+  if (!tut) errors.push('tutorial did not appear on first play');
+  await shot(page, 'tutorial');
+  for (let i = 0; i < 3; i++) { await page.click('.tutorial .btn.primary'); await page.waitForTimeout(200); }
+  const st0 = await page.evaluate(() => window.__pop.state + '|' + !document.querySelector('.tutorial'));
+  if (st0 !== 'play|true') errors.push(`tutorial did not hand off to play (${st0})`);
+  // second start must not show it again
+  await page.evaluate(() => { const a = window.__pop; a.toTitle(); });
+  await page.touchscreen.tap(195, 300); await page.waitForTimeout(300);
+  if (await page.evaluate(() => !!document.querySelector('.tutorial'))) errors.push('tutorial shown twice');
+  await page.evaluate(() => { window.__pop.autopilot = true; });
   await page.waitForFunction(() => window.__pop.game.score >= 6, null, { timeout: 60000 });
   await page.waitForTimeout(300); await shot(page, 'gameplay');
   await page.evaluate(() => { window.__pop.autopilot = false; });
   await page.waitForFunction(() => window.__pop.state === 'over', null, { timeout: 90000 });
   await page.waitForTimeout(600); await shot(page, 'gameover');
-  await page.waitForTimeout(400); await page.touchscreen.tap(40, 160); await page.waitForTimeout(200);
-  const st = await page.evaluate(() => window.__pop.state);
-  if (st !== 'play') errors.push(`tap after game over did not restart (state=${st})`);
+  // continue by watching a (simulated) ad keeps the score
+  const before = await page.evaluate(() => window.__pop.game.score);
+  const contVisible = await page.evaluate(() => { const b = [...document.querySelectorAll('#over .btn')].find(x => /Continue/.test(x.textContent)); return b && !b.hidden; });
+  if (!contVisible) errors.push('continue button not offered with test ads');
+  else {
+    await page.evaluate(() => [...document.querySelectorAll('#over .btn')].find(x => /Continue/.test(x.textContent)).click());
+    await page.waitForTimeout(3600);
+    const after = await page.evaluate(() => ({ s: window.__pop.state, score: window.__pop.game.score, lives: window.__pop.game.lives }));
+    if (after.s !== 'play' || after.score !== before || after.lives !== 2) errors.push(`continue did not resume correctly ${JSON.stringify(after)} vs ${before}`);
+    await page.waitForTimeout(400); await page.evaluate(() => { window.__pop.autopilot = false; });
+    await page.waitForFunction(() => window.__pop.state === 'over', null, { timeout: 90000 }); await page.waitForTimeout(500);
+    const again = await page.evaluate(() => { const b = [...document.querySelectorAll('#over .btn')].find(x => /Continue/.test(x.textContent)); return b && !b.hidden; });
+    if (again) errors.push('continue offered twice in one run');
+  }
+  // challenge link: banner → accept → seeded game
+  await page.goto(BASE + '?t=' + Date.now() + '#c=123456789.420.NIK'); await page.waitForFunction(() => !!window.__pop); await page.waitForTimeout(500);
+  const banner = await page.evaluate(() => { const b = document.querySelector('#title .banner'); return b && !b.hidden && b.textContent; });
+  if (!banner || !/NIK/.test(banner)) errors.push('challenge banner missing');
+  await shot(page, 'challenge');
+  await page.click('#title .banner button'); await page.waitForTimeout(300);
+  const seed = await page.evaluate(() => window.__pop.seed);
+  if (seed !== 123456789) errors.push(`challenge did not seed the game (${seed})`);
+  await page.evaluate(() => { window.__pop.autopilot = true; });
+  await page.waitForFunction(() => window.__pop.game.score >= 3, null, { timeout: 60000 });
+  await page.evaluate(() => { window.__pop.autopilot = false; });
+  await page.waitForFunction(() => window.__pop.state === 'over', null, { timeout: 90000 }); await page.waitForTimeout(500);
+  const versus = await page.evaluate(() => { const v = document.querySelector('#over .versus'); return v && !v.hidden && v.textContent; });
+  if (!versus || !/NIK/.test(versus)) errors.push('versus line missing after a challenge run');
+  await shot(page, 'versus');
   await page.close();
   if (errors.length) { console.error('Page errors:\n' + errors.join('\n')); process.exitCode = 1; } else console.log('smoke test: no page errors');
 }

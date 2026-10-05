@@ -90,3 +90,14 @@ test('a player who never taps dies within a few obstacles; reset restores a fres
 test('obstacle catalogue is consistent', () => {
   for (const [k, v] of Object.entries(OBSTACLES)) { assert.ok(v.kind === 'obstacle' || v.kind === 'hazard', k); if (v.kind === 'obstacle') assert.ok(v.needs.length >= 1); }
 });
+
+test('seeded courses repeat; revive clears the road and keeps the score', () => {
+  const a = new MeltGame({ seed: 5 }), b = new MeltGame({ seed: 5 });
+  assert.deepEqual(a.obstacles.map(o => o.type), b.obstacles.map(o => o.type));
+  const g = new MeltGame({ random: rng(11) }); run(g, 30); assert.ok(g.over);
+  const score = g.score;
+  assert.ok(g.revive()); assert.ok(!g.over); assert.equal(g.score, score);
+  assert.ok(g.obstacles.every(o => o.x > CONFIG.PLAYER_X + 300));
+  run(g, 0.5); assert.ok(!g.over, 'nothing hits right after a revive');
+  assert.equal(g.revive(), false, 'revive only works when over');
+});

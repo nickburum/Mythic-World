@@ -18,22 +18,32 @@ npm start          # http://localhost:8080 → the Game Box launcher
 
 Open it on your phone: it is a fullscreen, installable PWA. Tap a card and the game runs inside the box with a back pill top-left. Each game also works standalone at its own folder.
 
+## What every game has
+
+- **Its own music**, generated live from a small song description (`<game>/src/extras-config.js`); no audio files.
+- **A first-play tutorial**, three illustrated steps, shown once; *Show tutorials again* lives in the box settings.
+- **Challenge a friend**: every run is seeded. The result sheet shares a link; it opens the box straight into that game on the same seed, and the result says who won.
+- **Continue by watching an ad**: one per run, offered on the result sheet, never a banner. Rewarded ads come from AdMob in the iOS app; on the web add `?testads=1` to exercise the flow with a simulated ad.
+- **Scores that survive a reinstall**: the hub mirrors scores to iCloud Key-Value Storage in the iOS app and submits bests to **Game Center** (one leaderboard per game).
+
 ## Ship to iPhone / TestFlight
 
 ```bash
 bash ios/bootstrap.sh    # web build → Xcode project → opens Xcode
 ```
 
-Then pick your Team in Signing and press ▶. Full TestFlight and App Store checklist in [`ios/README.md`](ios/README.md).
+Then pick your Team in Signing and press ▶. New to the Apple side? [`ios/APPLE-SETUP.md`](ios/APPLE-SETUP.md) walks from enrolment to App Store submission, including Game Center, iCloud and AdMob. Shell details in [`ios/README.md`](ios/README.md).
 
 ## Layout
 
 ```
 index.html, css/box.css, src/box.js, src/games.js     the launcher (hub) and the catalogue
-css/game-ui.css                                       shared mobile UI kit every game's chrome uses (bottom sheets, 52px buttons, safe areas)
+css/game-ui.css                                       shared UI kit (symmetry, hairlines, bottom sheets, tutorial, banners)
+src/extras.js                                         music + tutorial + challenge + continue, wired into each game in one call
+src/music.js, src/ads.js, src/cloud.js, src/challenge.js   generative music, rewarded ads bridge, iCloud sync, challenge links
 switcher.js                                           right-edge drawer for standalone pages (hidden inside the box)
 melt/ skip/ pop/ orbit/ sky-temple/                   the games: each has core/ (pure rules + tests), render/, audio/, platform/, tools/, art/
-ios/                                                  SwiftUI shell: project.yml (XcodeGen), GameBox/*.swift (scheme handler, Game Center, haptics), bootstrap.sh, fastlane
+ios/                                                  SwiftUI shell: project.yml (XcodeGen + AdMob package), GameBox/*.swift (scheme handler, Game Center, iCloud, ads, haptics), bootstrap.sh, fastlane, APPLE-SETUP.md
 scripts/build-web.sh                                  assembles the shippable web build
 tests/box.test.js                                     hub catalogue + settings fan-out
 ```

@@ -5,7 +5,7 @@
  * Rules live in core/skip.js; the lake is drawn by render/renderer.js.
  */
 import { SkipGame, autopilot } from './core/skip.js';
-import { newSeed, cleanTag, challengeUrl, challengeFromUrl } from './core/challenge.js';
+import { newSeed, cleanTag, challengeFromUrl } from './core/challenge.js';
 import { Renderer } from './render/renderer.js';
 import { Effects } from './render/effects.js';
 import { Sfx } from './audio/sfx.js';
@@ -13,6 +13,10 @@ import { storage, KEYS } from './platform/storage.js';
 import { haptics } from './platform/haptics.js';
 import { bindPress } from './platform/input.js';
 import { Leaderboard } from './platform/leaderboard.js';
+import { Music } from '../../src/music.js';
+import { ads } from '../../src/ads.js';
+import { challengeLink } from '../../src/challenge.js';
+import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
 const STATE = Object.freeze({ TITLE: 'title', READY: 'ready', FLIGHT: 'flight', SUNK: 'sunk' });
@@ -64,6 +68,8 @@ class App {
     window.addEventListener('resize', () => this.renderer.resize());
     window.addEventListener('orientationchange', () => this.renderer.resize());
     document.addEventListener('visibilitychange', () => this.onVisibility());
+    this.music = new Music(song); this.music.setMuted(this.muted);
+    this.setupContinue();
     window.__skip = this;
     this.startDemo();
     requestAnimationFrame((t) => this.frame(t));
@@ -81,7 +87,7 @@ class App {
 
   bindUi() {
     bindPress(this.canvas, { onPress: () => this.press(), onRelease: () => this.release() });
-    $('play').addEventListener('click', () => { this.click(); this.start(); });
+    $('play').addEventListener('click', () => { this.click(); this.firstPlay(() => this.start()); });
     $('retry').addEventListener('click', () => { this.click(); this.start(this.challenge ? this.challenge.seed : undefined); });
     $('to-title').addEventListener('click', () => { this.click(); this.toTitle(); });
     $('open-howto').addEventListener('click', () => { this.click(); this.openPanel('howto'); });
@@ -98,15 +104,16 @@ class App {
     for (const b of document.querySelectorAll('.close-panel')) b.addEventListener('click', () => { this.click(); this.closePanels(); });
     for (const b of document.querySelectorAll('.close-screen')) b.addEventListener('click', () => { this.click(); this.closeScreens(); });
     for (const t of document.querySelectorAll('.tab')) t.addEventListener('click', () => { this.click(); this.showTab(t.dataset.tab); });
-    this.ui.optSound.addEventListener('change', () => { this.muted = !this.ui.optSound.checked; storage.set(KEYS.MUTED, this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); if (!this.muted) this.sfx.tap(); });
+    this.ui.optSound.addEventListener('change', () => { this.muted = !this.ui.optSound.checked; storage.set(KEYS.MUTED, this.muted); this.sfx.setMuted(this.muted); this.music.setMuted(this.muted); this.unlockAudio(); if (!this.muted) this.sfx.tap(); });
     this.ui.optHaptics.addEventListener('change', () => { this.hapticsOn = this.ui.optHaptics.checked; storage.set(KEYS.HAPTICS, this.hapticsOn); haptics.setEnabled(this.hapticsOn); if (this.hapticsOn) haptics.light(); });
     this.ui.optQuality.addEventListener('change', () => { this.qualityPref = this.ui.optQuality.value; storage.set('quality', this.qualityPref); this.setQuality(this.qualityPref === 'auto' ? (isTouch ? 'medium' : 'high') : this.qualityPref); });
     for (const inp of [this.ui.tagInput, this.ui.tagInput2]) inp.addEventListener('change', () => this.saveTag(inp.value));
     // tapping the start screen outside the menu starts a run (classic)
-    this.ui.title.addEventListener('pointerdown', (e) => { if (e.target === this.ui.title || e.target.closest('.title-block, .tap-start')) { this.click(); this.start(); } });
+    this.ui.title.addEventListener('pointerdown', (e) => { if (e.target === this.ui.title || e.target.closest('.title-block, .tap-start')) { this.click(); this.firstPlay(() => this.start()); } });
   }
 
-  click() { this.sfx.unlock(); this.sfx.tap(); }
+  click() { this.unlockAudio(); this.sfx.tap(); }
+  unlockAudio() { this.sfx.unlock(); if (this.sfx.ctx) { this.music.attach(this.sfx.ctx); this.music.start(); } }
   toast(text, ms = 2200) { const t = this.ui.toast; t.textContent = text; t.hidden = false; clearTimeout(this.toastT); this.toastT = setTimeout(() => { t.hidden = true; }, ms); }
   saveTag(v) { this.tag = cleanTag(v); storage.set(KEYS.NAME, this.tag); this.ui.tagInput.value = this.ui.tagInput2.value = this.tag === 'YOU' ? '' : this.tag; this.refreshHiscore(); }
   refreshHiscore() { const top = this.board.local.top(1)[0]; this.ui.best.textContent = fmt(top ? top.score : 0); this.ui.bestTag.textContent = top ? (top.tag || this.tag) : this.tag; }
@@ -182,6 +189,34 @@ class App {
     if (!this.ui.board.hidden) this.renderGlobal();
   }
 
+  /* ───────────── first-play tutorial, music, continue ───────────── */
+  firstPlay(cb) {
+    const all = (() => { try { return JSON.parse(localStorage.getItem('gamebox.tutorials') || '{}') || {}; } catch { return {}; } })();
+    if (all.skip) return cb();
+    let i = 0;
+    const wrap = document.createElement('section'); wrap.className = 'overlay menu tutorial'; wrap.setAttribute('data-ui', '');
+    wrap.innerHTML = '<div class="panel"><div class="tut-dots"></div><div class="tut-art"></div><b class="tut-title"></b><p class="tut-text"></p><button class="btn primary big" type="button">Next</button><button class="btn skip-tut" type="button">Skip</button></div>';
+    document.body.appendChild(wrap);
+    const render = () => { const st = steps[i]; wrap.querySelector('.tut-dots').innerHTML = steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join(''); wrap.querySelector('.tut-art').innerHTML = st.art; wrap.querySelector('.tut-title').textContent = st.title; wrap.querySelector('.tut-text').textContent = st.text; wrap.querySelector('.btn.primary').textContent = i === steps.length - 1 ? 'Play' : 'Next'; };
+    const finish = () => { all.skip = true; try { localStorage.setItem('gamebox.tutorials', JSON.stringify(all)); } catch {} wrap.remove(); cb(); };
+    wrap.querySelector('.btn.primary').addEventListener('click', () => { if (i < steps.length - 1) { i++; render(); } else finish(); });
+    wrap.querySelector('.skip-tut').addEventListener('click', finish);
+    render();
+  }
+  setupContinue() {
+    const btn = document.createElement('button'); btn.className = 'btn primary big'; btn.type = 'button'; btn.textContent = 'Continue · watch an ad'; btn.hidden = true;
+    const retry = $('retry'); retry.parentNode.insertBefore(btn, retry);
+    this.ui.continue = btn;
+    btn.addEventListener('click', async () => { btn.disabled = true; const ok = await ads.show(); btn.disabled = false; if (ok && this.revive()) { this.usedContinue = true; btn.hidden = true; } });
+    ads.onChange(() => this.refreshContinue());
+  }
+  refreshContinue() { this.ui.continue.hidden = !(ads.available && !this.usedContinue && this.state === STATE.SUNK && this.resultsShown); }
+  revive() {
+    if (!this.game.revive()) return false;
+    this.resultsShown = false; this.setState(STATE.FLIGHT); this.music.setMode('play'); this.hint('');
+    return true;
+  }
+
   /* ───────────── challenges ───────────── */
   readChallengeFromUrl() {
     const c = challengeFromUrl(location.href);
@@ -215,7 +250,7 @@ class App {
     const c = this.challenge
       ? { seed: this.challenge.seed, score: this.challenge.score, tag: this.challenge.tag, reply: { score: e.distance, tag: this.tag } }
       : { seed: this.game.seed, score: e.distance, tag: this.tag };
-    const url = challengeUrl(location.href.split('#')[0], c);
+    const url = challengeLink('skip', c);
     const text = this.challenge
       ? `I threw ${fmt(e.distance)} m on your lake in SKIP. ${e.distance > this.challenge.score ? 'Beat that!' : 'You win this one…'}`
       : `Beat my ${fmt(e.distance)} m stone skip in SKIP 🪨💦 Same lake, same lily pads:`;
@@ -228,6 +263,7 @@ class App {
 
   /* ───────────── play ───────────── */
   startDemo() {
+    this.music.setMode('title');
     this.demo = true; this.autopilot = true; this.autoHold = 0; this.demoHold = 0;
     this.game.resetWithSeed(newSeed()); this.fx.clear(); this.trail.length = 0;
     this.renderer.follow(0, 0, true);
@@ -240,12 +276,12 @@ class App {
     this.startDemo();
   }
   start(seed) {
-    this.closePanels(); this.closeScreens(); this.sfx.unlock();
+    this.closePanels(); this.closeScreens(); this.unlockAudio();
     this.demo = false; this.autopilot = false;
     if (seed === undefined) this.challenge = null;
     this.game.resetWithSeed(seed === undefined ? newSeed() : seed);
     this.fx.clear(); this.trail.length = 0; this.renderer.follow(0, 0, true);
-    this.setState(STATE.READY);
+    this.setState(STATE.READY); this.usedContinue = false; this.music.setMode('play');
     this.lastHud = { d: -1, s: -1 }; this.updateHud(true);
     this.ui.hudTarget.hidden = !this.challenge;
     if (this.challenge) this.ui.hudTarget.textContent = `Beat ${this.challenge.tag} · ${fmt(this.challenge.score)} m`;
@@ -254,7 +290,7 @@ class App {
   hint(text) { this.ui.hint.textContent = text; this.ui.hint.style.opacity = text ? 1 : 0; }
 
   press() {
-    this.sfx.unlock();
+    this.unlockAudio();
     if (this.state === STATE.READY) { this.holding = true; return; }
     if (this.state === STATE.FLIGHT) { this.game.tap(); return; }
     if (this.state === STATE.SUNK && this.stateTime > RETRY_LOCKOUT && !this.ui.over.hidden) { this.start(this.challenge ? this.challenge.seed : undefined); this.holding = true; }
@@ -326,6 +362,7 @@ class App {
     this.refreshHiscore();
     this.ui.over.hidden = false;
     this.resultsShown = true;
+    this.music.setMode('over'); this.refreshContinue();
   }
 
   updateHud(force = false) {

@@ -174,3 +174,12 @@ test('drop results report the slide axis', () => {
   const m = g.moving; m[m.axis] = g.top()[m.axis] + 0.3;
   assert.equal(g.drop().axis, 'z');
 });
+
+test('revive spawns a new stone after a miss and keeps the score', () => {
+  const g = gameAt(0.3); g.drop();
+  const m = g.moving; m[m.axis] = g.top()[m.axis] + CONFIG.BLOCK_SIZE + 1; g.drop();
+  assert.ok(g.over); const score = g.score;
+  assert.ok(g.revive()); assert.ok(!g.over); assert.ok(g.moving); assert.equal(g.score, score);
+  assert.equal(g.revive(), false);
+  const a = new StackGame({ seed: 3 }), b = new StackGame({ seed: 3 }); assert.equal(a.moving.dir, b.moving.dir);
+});

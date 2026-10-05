@@ -11,6 +11,8 @@ import { Sfx } from './audio/sfx.js';
 import { storage, KEYS } from './platform/storage.js';
 import { haptics } from './platform/haptics.js';
 import { bindTap } from './platform/input.js';
+import { attachExtras } from '../../src/extras.js';
+import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -58,6 +60,9 @@ class App {
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
 
     // test hook (used by tools/render-art.mjs to script screenshots)
+    this.extras = attachExtras({ id: 'sky-temple', name: 'Sky Temple', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx });
+    this.extras.setMuted(this.muted);
     window.__skyTemple = this;
 
     requestAnimationFrame((t) => this.frame(t));
@@ -76,7 +81,7 @@ class App {
 
   bindUi() {
     bindTap(this.canvas, () => this.tap());
-    this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.sfx.tap(); this.start(); });
+    this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.extras.unlock(); this.sfx.tap(); this.start(); });
     this.ui.share.addEventListener('click', () => this.share());
     this.ui.mute.addEventListener('click', () => this.toggleMute());
     if (!navigator.share) this.ui.share.hidden = true;
@@ -99,10 +104,10 @@ class App {
   }
 
   tap() {
-    this.sfx.unlock();
+    this.sfx.unlock(); this.extras.unlock();
     switch (this.state) {
       case STATE.TITLE:
-        this.start();
+        this.extras.beforeStart(() => this.start());
         break;
       case STATE.PLAYING:
         this.game.drop();
@@ -115,9 +120,11 @@ class App {
     }
   }
 
-  start() {
-    this.seedHue = Math.floor(Math.random() * 360);
-    this.game.reset();
+  start(seed) {
+    seed = seed ?? this.extras.currentSeed();
+    this.extras.onStart(seed);
+    this.game.resetWithSeed(seed === undefined ? this.extras.newSeed() : seed);
+    this.seedHue = Math.floor(this.game.random() * 360);
     this.fx.clear();
     this.setState(STATE.PLAYING);
     this.updateScore(0);
@@ -142,6 +149,14 @@ class App {
     this.ui.newBest.hidden = !isBest || score === 0;
     this.ui.overCombo.textContent = this.game.bestCombo >= 3 ? `Best streak ×${this.game.bestCombo}` : '';
     this.setState(STATE.OVER);
+    this.extras.onOver(score);
+  }
+
+  /** Rewarded continue: a fresh stone slides in, the tower and score stay. */
+  revive() {
+    if (!this.game.revive()) return false;
+    this.fx.clear(); this.setState(STATE.PLAYING); this.updateCameraTarget(true);
+    return true;
   }
 
   /* ───────────── game events ───────────── */
@@ -265,6 +280,7 @@ class App {
     storage.set(KEYS.MUTED, this.muted);
     this.sfx.setMuted(this.muted);
     this.sfx.unlock();
+    this.extras.setMuted(this.muted); this.extras.unlock();
     this.applyMuteIcon();
     if (!this.muted) this.sfx.tap();
   }

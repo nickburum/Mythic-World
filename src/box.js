@@ -3,7 +3,8 @@
  * inside the box (an iframe, so each game keeps its own storage and service
  * worker), and fans box-wide settings out to every game.
  */
-import { GAMES, byId, readBest, formatBest, applySettings, SCORE_KEYS } from './games.js';
+import { GAMES, byId, readBest, formatBest, applySettings, SCORE_KEYS, gcScore } from './games.js';
+import { Cloud } from './cloud.js';
 
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -20,10 +21,15 @@ class Box {
     this.ui.optSound.checked = this.settings.sound; this.ui.optHaptics.checked = this.settings.haptics; this.ui.optQuality.value = this.settings.quality;
     this.render();
     this.bind();
+    this.cloud = new Cloud();
+    this.cloud.onChange(() => { this.refreshBests(); this.toast('Scores restored from iCloud'); });
+    this.cloud.init();
+    this.setupNative();
     window.__box = this;
     // deep link: #play=skip opens a game straight away (used by the native shell and challenge links)
     const m = location.hash.match(/play=([a-z-]+)/);
     if (m && byId(m[1])) this.open(m[1], location.hash.replace(/^#play=[a-z-]+&?/, '#'));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.cloud.push(); });
   }
 
   heroGame() { return byId(LS.get('gamebox.last', null)) || GAMES[0]; }
@@ -62,6 +68,7 @@ class Box {
     const save = () => { this.settings = { sound: this.ui.optSound.checked, haptics: this.ui.optHaptics.checked, quality: this.ui.optQuality.value }; LS.set('gamebox.settings', this.settings); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); this.syncSound(); vibrate(6); };
     this.syncSound();
     this.ui.optSound.addEventListener('change', save); this.ui.optHaptics.addEventListener('change', save); this.ui.optQuality.addEventListener('change', save);
+    $('replay-tutorials').addEventListener('click', () => { localStorage.removeItem('gamebox.tutorials'); this.toast('Tutorials will show again'); });
     $('reset-scores').addEventListener('click', () => {
       if (!confirm('Reset every best score in the box?')) return;
       for (const k of SCORE_KEYS) localStorage.removeItem(k);
@@ -84,7 +91,8 @@ class Box {
     this.ui.player.hidden = false;
     this.ui.loading.classList.remove('done');
     this.ui.backLabel.textContent = 'Games';
-    this.ui.frame.src = `${g.path}index.html?box=1${extraHash && extraHash !== '#' ? extraHash : ''}`;
+    const test = /[?&]testads=1/.test(location.search) ? '&testads=1' : '';
+    this.ui.frame.src = `${g.path}index.html?box=1${test}${extraHash && extraHash !== '#' ? extraHash : ''}`;
     if (!location.hash.includes(`play=${g.id}`)) history.pushState(null, '', `#play=${g.id}`);
     this.quiet();
   }
@@ -95,10 +103,35 @@ class Box {
     this.ui.player.hidden = true;
     document.body.dataset.view = 'home';
     this.refreshBests();
+    this.syncScores();
     if (pop && location.hash.includes('play=')) history.replaceState(null, '', location.pathname + location.search);
   }
 
   syncSound() { const on = this.ui.optSound.checked; this.ui.soundOn.hidden = !on; this.ui.soundOff.hidden = on; }
+
+  /** Native callbacks land in this (main) frame; forward them to the running game, and own Game Center for the box. */
+  setupNative() {
+    const fwd = (obj, fn) => (...args) => { try { const w = this.ui.frame.contentWindow; if (w && w[obj] && w[obj][fn]) w[obj][fn](...args); } catch {} };
+    window.AdsBridge = { onReady: fwd('AdsBridge', 'onReady'), onResult: fwd('AdsBridge', 'onResult') };
+    window.GameCenterBridge = {
+      onAuth: (e) => { this.gc = e; fwd('GameCenterBridge', 'onAuth')(e); },
+      onSubmitted: fwd('GameCenterBridge', 'onSubmitted'),
+    };
+    const gcb = window.webkit?.messageHandlers?.gameCenter;
+    if (gcb) { try { gcb.postMessage({ type: 'authenticate' }); } catch {} }
+  }
+  /** After a game: push scores to iCloud and submit new bests to Game Center. */
+  syncScores() {
+    this.cloud.push();
+    const gcb = window.webkit?.messageHandlers?.gameCenter; if (!gcb || !this.gc?.authenticated) return;
+    const sent = LS.get('gamebox.gcSent', {});
+    for (const g of GAMES) {
+      if (!g.leaderboardID) continue;
+      const best = readBest(g, k => localStorage.getItem(k)); const score = gcScore(g, best);
+      if (score > 0 && score !== sent[g.id]) { try { gcb.postMessage({ type: 'submit', leaderboardID: g.leaderboardID, score }); sent[g.id] = score; } catch {} }
+    }
+    LS.set('gamebox.gcSent', sent);
+  }
 
   toast(text, ms = 2000) { const t = this.ui.toast; t.textContent = text; t.hidden = false; clearTimeout(this.toastT); this.toastT = setTimeout(() => { t.hidden = true; }, ms); }
 }

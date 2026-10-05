@@ -78,7 +78,8 @@ body[data-view="game"] .home { display: none; }
 .note { margin: 10px 0 2px; font-size: 12px; color: var(--ink-3); text-align: center; }
 .btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 56px; padding: 14px 18px; border: 1px solid var(--line-2); border-radius: var(--r); background: transparent; font-weight: 800; font-size: 13px; letter-spacing: .24em; text-transform: uppercase; cursor: pointer; }
 .btn:active { transform: scale(.98); }
-.btn.primary { background: #fff; color: #0f172a; border-color: #fff; margin-top: 6px; }
+.btn { margin-top: 8px; }
+.btn.primary { background: #fff; color: #0f172a; border-color: #fff; }
 .btn.danger { color: #ff9a9a; border-color: rgba(255,120,120,.5); margin-top: 8px; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 28px); transform: translateX(-50%); z-index: 20; padding: 10px 16px; border-radius: 999px; background: #fff; color: #0f172a; font-weight: 800; font-size: 12px; letter-spacing: .08em; }
 .toast[hidden] { display: none; }
