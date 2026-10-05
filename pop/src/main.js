@@ -33,14 +33,15 @@ class App {
     this.bindGame();
     this.canvas.addEventListener('pointerdown', (e) => this.press(e), { passive: false });
     this.canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
-    $('play').addEventListener('click', () => { this.click(); this.start(); });
+    $('play').addEventListener('click', () => { this.click(); this.extras.beforeStart(() => this.start()); });
     $('retry').addEventListener('click', () => { this.click(); this.start(); });
     $('to-title').addEventListener('click', () => { this.click(); this.toTitle(); });
     this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.extras.setMuted(this.muted); this.extras.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
     window.addEventListener('resize', () => this.r.resize());
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
     this.extras = attachExtras({ id: 'pop', name: 'POP', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
-      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx });
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx,
+      titleTap: () => { if (this.state === 'title') { this.click(); this.extras.beforeStart(() => this.start()); } } });
     this.extras.setMuted(this.muted);
     window.__pop = this;
     requestAnimationFrame((t) => this.frame(t));

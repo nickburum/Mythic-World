@@ -109,3 +109,10 @@ body[data-state="play"] .corner-btn, body[data-state="flight"] .corner-btn, body
 .toast { position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 28px); transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 999px; background: #fff; color: #0f172a; font-weight: 800; font-size: 12px; letter-spacing: .06em; }
 .toast[hidden] { display: none; }
 @media (min-width: 640px) and (min-height: 600px) { .tutorial { justify-content: center; padding: 20px; } }
+.link-sheet { z-index: 35; background: rgba(0,0,0,.45); justify-content: flex-end; padding: 0; }
+.link-sheet .panel { text-align: center; }
+.link-input { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); background: rgba(0,0,0,.3); color: var(--ink); font: inherit; font-size: 13px; text-align: center; -webkit-user-select: text; user-select: text; }
+.help-btn { right: auto; left: calc(var(--safe-left) + 14px); }
+body:not([data-state="title"]) .help-btn { display: none; }
+.in-box .help-btn, .in-box .corner-btn { top: calc(var(--safe-top) + 58px); }
+@media (min-width: 640px) and (min-height: 600px) { .link-sheet { justify-content: center; padding: 20px; } }

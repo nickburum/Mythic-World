@@ -16,12 +16,14 @@
  *   revive(),                     // resume the run after a rewarded ad → true if it did
  *   over: '#over', retry: '#retry', title: '#title',   // selectors
  *   audioContext(),               // () => AudioContext|null (after the game unlocked audio)
+ *   titleTap(),                   // called when the player taps the title screen itself (logo, hint, empty space)
  * })
  * Returns { music, beforeStart(cb), onOver(score), onStart(), onTitle(), unlock(), challenge }
  */
 import { Music } from './music.js';
 import { ads } from './ads.js';
 import { newSeed, cleanTag, challengeLink, challengeFromUrl } from './challenge.js';
+import { shareLink } from './share.js';
 
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 const fmt = (n, unit) => (unit === ' m' ? (Math.round(n * 10) / 10).toFixed(1) : String(Math.round(n))) + unit;
@@ -67,7 +69,7 @@ export function attachExtras(o) {
     const c = state.challenge ? { seed: state.challenge.seed, score: state.challenge.score, tag: state.challenge.tag, reply: { score, tag: tag() } } : { seed: o.seed(), score, tag: tag() };
     const url = challengeLink(o.id, c);
     const text = state.challenge ? `I scored ${fmt(score, o.unit)} on your ${o.name} run. ${score > state.challenge.score ? 'Beat that.' : 'You win this one.'}` : `Beat my ${fmt(score, o.unit)} in ${o.name}. Same run, same luck:`;
-    try { if (navigator.share) { await navigator.share({ title: `${o.name} challenge`, text, url }); return; } await navigator.clipboard.writeText(`${text} ${url}`); toast('Challenge link copied'); } catch { /* cancelled */ }
+    await shareLink({ title: `${o.name} challenge`, text, url }, { toast });
   }
   chal.addEventListener('click', share);
 
@@ -81,15 +83,22 @@ export function attachExtras(o) {
   ads.onChange(() => refreshContinue());
   function refreshContinue() { cont.hidden = !(ads.available && !state.usedContinue && typeof o.revive === 'function' && over && !over.hidden); }
 
+  /* ─── title: taps on the logo / hint / empty space start the game; a ? button replays the tutorial ─── */
+  if (o.titleTap) title.addEventListener('pointerdown', (e) => { if (e.target.closest('button, input, select, a, .banner')) return; e.preventDefault(); o.titleTap(); }, { passive: false });
+  const help = el(`<button class="icon-btn corner-btn help-btn" type="button" data-ui aria-label="How to play"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7"/><path d="M12 17h.01"/></svg></button>`);
+  document.body.appendChild(help);
+  help.addEventListener('click', () => showTutorial(() => {}, false));
+
   /* ─── tutorial ─── */
   const seen = () => (LS.get('gamebox.tutorials', {}) || {})[o.id];
-  function showTutorial(done) {
+  function showTutorial(done, mark = true) {
+    if (document.querySelector('.tutorial')) return;
     let i = 0;
     const wrap = el(`<section class="overlay menu tutorial" data-ui><div class="panel"><div class="tut-dots"></div><div class="tut-art"></div><b class="tut-title"></b><p class="tut-text"></p><button class="btn primary big" type="button">Next</button><button class="btn skip-tut" type="button">Skip</button></div></section>`);
     document.body.appendChild(wrap);
     const dots = wrap.querySelector('.tut-dots'), art = wrap.querySelector('.tut-art'), t = wrap.querySelector('.tut-title'), p = wrap.querySelector('.tut-text'), next = wrap.querySelector('.btn.primary');
     const render = () => { const s = o.steps[i]; dots.innerHTML = o.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join(''); art.innerHTML = s.art || ''; t.textContent = s.title; p.textContent = s.text; next.textContent = i === o.steps.length - 1 ? 'Play' : 'Next'; };
-    const finish = () => { const all = LS.get('gamebox.tutorials', {}) || {}; all[o.id] = true; LS.set('gamebox.tutorials', all); wrap.remove(); done(); };
+    const finish = () => { if (mark) { const all = LS.get('gamebox.tutorials', {}) || {}; all[o.id] = true; LS.set('gamebox.tutorials', all); } wrap.remove(); done(); };
     next.addEventListener('click', () => { if (i < o.steps.length - 1) { i++; render(); } else finish(); });
     wrap.querySelector('.skip-tut').addEventListener('click', finish);
     render();
@@ -102,7 +111,7 @@ export function attachExtras(o) {
 
   /* ─── lifecycle hooks the game calls ─── */
   const api = {
-    music, challenge: state, toast, beforeStart,
+    music, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share,
     unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); } },
     onTitle() { music.setMode('title'); },
     onStart(seed) { state.usedContinue = false; if (seed === undefined) state.challenge = null; cont.hidden = true; versus.hidden = true; music.setMode('play'); },

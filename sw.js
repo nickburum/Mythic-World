@@ -1,6 +1,6 @@
 /* Game Box hub — offline cache for the launcher. Each game keeps its own worker in its folder. */
-const VERSION = 'gamebox-v2';
-const ASSETS = ['./', './index.html', './css/box.css', './src/box.js', './src/games.js', './src/cloud.js', './manifest.webmanifest', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png',
+const VERSION = 'gamebox-v3';
+const ASSETS = ['./', './index.html', './css/box.css', './src/box.js', './src/games.js', './src/cloud.js', './src/share.js', './manifest.webmanifest', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png',
   './melt/art/icon-192.png', './skip/art/icon-192.png', './pop/art/icon-192.png', './orbit/art/icon-192.png', './sky-temple/art/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ASSETS).catch(() => {})).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('gamebox-') && k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

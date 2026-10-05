@@ -5,6 +5,7 @@
 import { MeltGame, autopilot } from './core/melt.js';
 import { PHASE_TEMP } from './core/palette.js';
 import { attachExtras } from '../../src/extras.js';
+import { shareLink } from '../../src/share.js';
 import { song, steps } from './extras-config.js';
 import { CONFIG } from './core/config.js';
 import { Renderer } from './render/renderer.js';
@@ -67,7 +68,8 @@ class App {
     window.addEventListener('orientationchange', () => this.onResize());
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
     this.extras = attachExtras({ id: 'melt', name: 'MELT', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
-      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx });
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx,
+      titleTap: () => { if (this.state === STATE.TITLE) this.press(); } });
     this.extras.setMuted(this.muted);
     window.__melt = this;
     requestAnimationFrame((t) => this.frame(t));
@@ -90,7 +92,6 @@ class App {
     this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.extras.unlock(); this.sfx.tap(); this.start(); });
     this.ui.share.addEventListener('click', () => this.share());
     this.ui.mute.addEventListener('click', () => this.toggleMute());
-    if (!navigator.share) this.ui.share.hidden = true;
   }
 
   onResize() {
@@ -259,8 +260,8 @@ class App {
     this.ui.mute.setAttribute('aria-label', this.muted ? 'Unmute' : 'Mute');
   }
   async share() {
-    const text = `I survived ${this.game.score} obstacles as ice, water and steam in MELT 💧 Can you beat me?`;
-    try { await navigator.share({ title: 'MELT', text, url: location.href }); } catch { /* cancelled */ }
+    const text = `I survived ${this.game.score} obstacles as ice, water and steam in MELT. Can you beat me?`;
+    await shareLink({ title: 'MELT', text, url: location.href.split('#')[0] }, { toast: this.extras.toast });
   }
 }
 

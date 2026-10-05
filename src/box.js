@@ -5,6 +5,7 @@
  */
 import { GAMES, byId, readBest, formatBest, applySettings, SCORE_KEYS, gcScore } from './games.js';
 import { Cloud } from './cloud.js';
+import { shareHere } from './share.js';
 
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -78,6 +79,8 @@ class Box {
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!this.ui.settings.hidden) this.ui.settings.hidden = true; else if (this.current) this.close(); } });
     window.addEventListener('hashchange', () => { const m = location.hash.match(/play=([a-z-]+)/); if (m && byId(m[1]) && (!this.current || this.current.id !== m[1])) this.open(m[1]); else if (!m && this.current) this.close(false); });
     this.ui.frame.addEventListener('load', () => { this.ui.loading.classList.add('done'); });
+    // games inside the box hand their share requests up here, where the permissions live
+    window.addEventListener('message', (e) => { const d = e.data; if (d && d.type === 'gamebox:share') shareHere({ title: d.title, text: d.text, url: d.url }, { toast: (t) => this.toast(t) }); });
     // fade the back pill while playing; any touch near the top brings it back
     let quietT; const quiet = () => { clearTimeout(quietT); this.ui.player.classList.remove('quiet'); quietT = setTimeout(() => this.ui.player.classList.add('quiet'), 2500); };
     this.ui.player.addEventListener('pointerdown', quiet); this.quiet = quiet;

@@ -16,6 +16,7 @@ import { Leaderboard } from './platform/leaderboard.js';
 import { Music } from '../../src/music.js';
 import { ads } from '../../src/ads.js';
 import { challengeLink } from '../../src/challenge.js';
+import { shareLink } from '../../src/share.js';
 import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -254,11 +255,7 @@ class App {
     const text = this.challenge
       ? `I threw ${fmt(e.distance)} m on your lake in SKIP. ${e.distance > this.challenge.score ? 'Beat that!' : 'You win this one…'}`
       : `Beat my ${fmt(e.distance)} m stone skip in SKIP 🪨💦 Same lake, same lily pads:`;
-    try {
-      if (navigator.share) { await navigator.share({ title: 'SKIP challenge', text, url }); return; }
-      await navigator.clipboard.writeText(`${text} ${url}`);
-      this.toast('Challenge link copied');
-    } catch { /* cancelled */ }
+    await shareLink({ title: 'SKIP challenge', text, url }, { toast: (t) => this.toast(t) });
   }
 
   /* ───────────── play ───────────── */

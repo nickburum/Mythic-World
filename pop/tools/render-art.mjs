@@ -25,18 +25,27 @@ async function renderScreens(browser) {
   page.on('pageerror', e => errors.push(String(e))); page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); }); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(BASE + '?testads=1'); await page.waitForFunction(() => !!window.__pop); await page.waitForTimeout(1500);
   await shot(page, 'title');
-  // first play: tapping the title shows the tutorial, then starts the game
-  await page.touchscreen.tap(195, 300); await page.waitForTimeout(400);
+  // first play: the Play button shows the tutorial, then starts the game
+  await page.click('#play'); await page.waitForTimeout(400);
   const tut = await page.evaluate(() => !!document.querySelector('.tutorial'));
   if (!tut) errors.push('tutorial did not appear on first play');
   await shot(page, 'tutorial');
   for (let i = 0; i < 3; i++) { await page.click('.tutorial .btn.primary'); await page.waitForTimeout(200); }
   const st0 = await page.evaluate(() => window.__pop.state + '|' + !document.querySelector('.tutorial'));
   if (st0 !== 'play|true') errors.push(`tutorial did not hand off to play (${st0})`);
-  // second start must not show it again
+  // second start must not show it again; a tap on the logo itself starts the game
   await page.evaluate(() => { const a = window.__pop; a.toTitle(); });
-  await page.touchscreen.tap(195, 300); await page.waitForTimeout(300);
+  await page.waitForTimeout(200);
+  const logo = await page.$('#title .logo'); const box = await logo.boundingBox();
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); await page.waitForTimeout(300);
   if (await page.evaluate(() => !!document.querySelector('.tutorial'))) errors.push('tutorial shown twice');
+  if ((await page.evaluate(() => window.__pop.state)) !== 'play') errors.push('tapping the logo did not start the game');
+  // the ? button replays the tutorial on demand
+  await page.evaluate(() => window.__pop.toTitle()); await page.waitForTimeout(200);
+  await page.click('.help-btn'); await page.waitForTimeout(300);
+  if (!(await page.evaluate(() => !!document.querySelector('.tutorial')))) errors.push('help button did not open the tutorial');
+  await page.click('.tutorial .skip-tut'); await page.waitForTimeout(200);
+  await page.click('#play'); await page.waitForTimeout(300);
   await page.evaluate(() => { window.__pop.autopilot = true; });
   await page.waitForFunction(() => window.__pop.game.score >= 6, null, { timeout: 60000 });
   await page.waitForTimeout(300); await shot(page, 'gameplay');
@@ -72,6 +81,12 @@ async function renderScreens(browser) {
   const versus = await page.evaluate(() => { const v = document.querySelector('#over .versus'); return v && !v.hidden && v.textContent; });
   if (!versus || !/NIK/.test(versus)) errors.push('versus line missing after a challenge run');
   await shot(page, 'versus');
+  // sharing standalone (no navigator.share in headless) must still surface the link
+  await page.evaluate(() => { delete navigator.share; });
+  await page.evaluate(() => [...document.querySelectorAll('#over .btn')].find(x => /Send result|Challenge/.test(x.textContent)).click());
+  await page.waitForTimeout(500);
+  const surfaced = await page.evaluate(() => !!document.querySelector('.link-sheet') || (document.getElementById('toast') && !document.getElementById('toast').hidden));
+  if (!surfaced) errors.push('share produced neither a toast nor a link sheet');
   await page.close();
   if (errors.length) { console.error('Page errors:\n' + errors.join('\n')); process.exitCode = 1; } else console.log('smoke test: no page errors');
 }

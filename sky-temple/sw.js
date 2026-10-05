@@ -1,11 +1,11 @@
 /* Sky Temple — offline cache. Bump VERSION whenever shipped files change. */
-const VERSION = 'skytemple-v6';
+const VERSION = 'skytemple-v7';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
   './manifest.webmanifest',
-  '../switcher.js', '../css/game-ui.css', '../src/extras.js', '../src/music.js', '../src/ads.js', '../src/challenge.js', './src/extras-config.js',
+  '../switcher.js', '../css/game-ui.css', '../src/extras.js', '../src/share.js', '../src/music.js', '../src/ads.js', '../src/challenge.js', './src/extras-config.js',
   '../art/icon-192.png',
   './src/main.js',
   './src/core/config.js',

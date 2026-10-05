@@ -36,6 +36,14 @@ async function renderScreens(browser) {
   await shot(page, 'in-box');
   const embedded = frame ? await frame.evaluate(() => !document.querySelector('.gsw-handle')) : false;
   if (!embedded) errors.push('switcher should hide inside the box');
+  // a share request from the game inside the box reaches the hub and surfaces something
+  await page.evaluate(() => { delete navigator.share; });
+  await frame.evaluate(() => window.parent.postMessage({ type: 'gamebox:share', title: 'T', text: 'hi', url: 'https://example.com/x' }, '*'));
+  await page.waitForTimeout(500);
+  const shared = await page.evaluate(() => !!document.querySelector('.link-sheet') || !document.getElementById('toast').hidden);
+  if (!shared) errors.push('delegated share did not surface in the hub');
+  await shot(page, 'share-sheet');
+  await page.evaluate(() => document.querySelector('.link-sheet')?.remove());
   await page.click('#back'); await page.waitForTimeout(300);
   const home = await page.evaluate(() => document.body.dataset.view === 'home' && document.getElementById('hero-name').textContent === 'SKIP' && document.querySelectorAll('#grid .card').length === 4);
   if (!home) errors.push('back did not return home with SKIP as the hero and four cards');

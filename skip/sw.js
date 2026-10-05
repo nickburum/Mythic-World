@@ -1,7 +1,7 @@
 /* SKIP — offline cache. Bump VERSION whenever shipped files change. */
-const VERSION = 'skip-v4';
+const VERSION = 'skip-v5';
 const ASSETS = [
-  './', './index.html', './css/style.css', './manifest.webmanifest', '../switcher.js', '../css/game-ui.css', '../src/extras.js', '../src/music.js', '../src/ads.js', '../src/challenge.js', './src/extras-config.js',
+  './', './index.html', './css/style.css', './manifest.webmanifest', '../switcher.js', '../css/game-ui.css', '../src/extras.js', '../src/share.js', '../src/music.js', '../src/ads.js', '../src/challenge.js', './src/extras-config.js',
   './src/main.js', './src/core/config.js', './src/core/skip.js', './src/core/palette.js', './src/core/sky.js', './src/core/challenge.js',
   './src/render/renderer.js', './src/render/effects.js', './src/audio/sfx.js',
   './src/platform/storage.js', './src/platform/haptics.js', './src/platform/input.js', './src/platform/leaderboard.js',

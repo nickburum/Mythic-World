@@ -12,6 +12,7 @@ import { storage, KEYS } from './platform/storage.js';
 import { haptics } from './platform/haptics.js';
 import { bindTap } from './platform/input.js';
 import { attachExtras } from '../../src/extras.js';
+import { shareLink } from '../../src/share.js';
 import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -61,7 +62,8 @@ class App {
 
     // test hook (used by tools/render-art.mjs to script screenshots)
     this.extras = attachExtras({ id: 'sky-temple', name: 'Sky Temple', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
-      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx });
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx,
+      titleTap: () => { if (this.state === STATE.TITLE) this.tap(); } });
     this.extras.setMuted(this.muted);
     window.__skyTemple = this;
 
@@ -84,7 +86,6 @@ class App {
     this.ui.retry.addEventListener('click', () => { this.sfx.unlock(); this.extras.unlock(); this.sfx.tap(); this.start(); });
     this.ui.share.addEventListener('click', () => this.share());
     this.ui.mute.addEventListener('click', () => this.toggleMute());
-    if (!navigator.share) this.ui.share.hidden = true;
   }
 
   onResize() {
@@ -291,12 +292,8 @@ class App {
   }
 
   async share() {
-    const text = `I stacked ${this.game.score} stones in Sky Temple ⛩️ Can you beat me?`;
-    try {
-      await navigator.share({ title: 'Sky Temple', text, url: location.href });
-    } catch {
-      /* user cancelled */
-    }
+    const text = `I stacked ${this.game.score} stones in Sky Temple. Can you beat me?`;
+    await shareLink({ title: 'Sky Temple', text, url: location.href.split('#')[0] }, { toast: this.extras.toast });
   }
 }
 

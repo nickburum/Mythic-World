@@ -86,3 +86,10 @@ body[data-view="game"] .home { display: none; }
 
 @media (max-height: 640px) { .card { min-height: 170px; } .hero-icon { width: 56px; height: 56px; } }
 @media (prefers-reduced-motion: reduce) { .sheet, .scrim { animation: none; } }
+
+/* delegated share fallback sheet (same look as the settings sheet) */
+.link-sheet { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.5); }
+.link-sheet .panel { width: min(100%, 520px); padding: 18px 22px calc(var(--safe-bottom) + 18px); border-radius: var(--r-lg) var(--r-lg) 0 0; background: #111a33; border: 1px solid var(--line); border-bottom: 0; display: flex; flex-direction: column; gap: 10px; text-align: center; animation: up .3s cubic-bezier(.2,.9,.2,1.05); }
+.link-sheet .label { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-2); }
+.link-sheet .tut-text { margin: 0; font-size: 14px; color: var(--ink-2); }
+.link-input { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); background: rgba(0,0,0,.3); color: var(--ink); font: inherit; font-size: 13px; text-align: center; -webkit-user-select: text; user-select: text; }
