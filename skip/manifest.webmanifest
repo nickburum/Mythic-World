@@ -1,0 +1,17 @@
+{
+  "name": "SKIP",
+  "short_name": "SKIP",
+  "description": "Skip a stone across a sunset lake. Tap when it kisses the water.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#1a2a4a",
+  "theme_color": "#1a2a4a",
+  "icons": [
+    { "src": "art/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "art/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "art/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "art/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

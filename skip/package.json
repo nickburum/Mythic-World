@@ -1,0 +1,14 @@
+{
+  "name": "skip",
+  "version": "1.0.0",
+  "description": "SKIP — skip a stone across a sunset lake. One tap, gorgeous water, Game Center leaderboards.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "npx http-server . -p 8080 -c-1",
+    "test": "node --test tests/*.test.js",
+    "icons": "node tools/make-icon.mjs && node tools/render-art.mjs",
+    "screens": "node tools/render-art.mjs --screens"
+  },
+  "license": "MIT"
+}

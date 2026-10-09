@@ -1,0 +1,118 @@
+/*
+ * Game Box — shared UI kit. Symmetry, clean lines, minimal.
+ * Every screen is composed on the centre axis: centred type, equal-width
+ * stacked actions, hairline 1px borders, flat surfaces, 14px radii, one
+ * accent per game (--accent). Thumb-first: primary actions sit in a bottom
+ * sheet on phones, buttons are ≥56px, safe areas everywhere.
+ */
+:root {
+  --ink: #fff; --ink-2: rgba(255,255,255,.64); --ink-3: rgba(255,255,255,.4);
+  --line: rgba(255,255,255,.18); --line-2: rgba(255,255,255,.3);
+  --surface: rgba(10,14,28,.62); --accent: #fff;
+  --r: 14px; --r-lg: 22px;
+  --font: ui-rounded, -apple-system, "SF Pro Rounded", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; color: var(--ink); font-family: var(--font); -webkit-user-select: none; user-select: none; touch-action: none; overscroll-behavior: none; }
+#game { position: fixed; inset: 0; display: block; touch-action: none; }
+button { font: inherit; color: inherit; }
+
+/* ─── overlays: a 3-row centred composition (top / middle / bottom) ─── */
+.overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(var(--safe-top) + 20px) calc(var(--safe-right) + 24px) calc(var(--safe-bottom) + 24px) calc(var(--safe-left) + 24px); text-align: center; pointer-events: none; }
+.overlay[hidden] { display: none; }
+.menu > * { pointer-events: auto; }
+.menu { animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─── type ─── */
+.eyebrow { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; }
+.logo { margin: 0; line-height: .92; font-weight: 900; font-size: clamp(72px, 22vw, 124px); letter-spacing: .04em; color: var(--ink); text-shadow: 0 10px 40px rgba(0,0,0,.35); }
+.tagline { margin: 12px auto 0; max-width: 280px; font-size: 15px; line-height: 1.45; color: var(--ink-2); }
+.label { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-2); }
+.big { font-size: 68px; font-weight: 900; line-height: 1; }
+.mid { font-size: 26px; font-weight: 800; line-height: 1.1; }
+.hint { font-size: 12px; letter-spacing: .1em; color: var(--ink-3); }
+
+/* ─── title layout ─── */
+#title { justify-content: space-between; }
+.title-block { margin-top: 8vh; }
+.sheet-ish { width: min(100%, 360px); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.title-best { font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-2); }
+.title-best strong { color: var(--ink); font-size: 16px; margin-left: 8px; letter-spacing: 0; }
+.tap-hint { font-weight: 800; font-size: 15px; letter-spacing: .3em; color: var(--ink); animation: blink 1.2s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+
+/* ─── HUD ─── */
+#hud { justify-content: flex-start; }
+.hud-top { margin-top: 2vh; display: flex; flex-direction: column; align-items: center; }
+.score { font-size: clamp(56px, 18vw, 92px); font-weight: 900; line-height: 1; text-shadow: 0 6px 30px rgba(0,0,0,.35); }
+
+/* ─── buttons: equal width, stacked, hairline ─── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px; padding: 14px 18px; border: 1px solid var(--line-2); border-radius: var(--r); background: transparent; font-weight: 800; font-size: 14px; letter-spacing: .22em; text-transform: uppercase; cursor: pointer; transition: transform .08s ease, background .15s; }
+.btn:active { transform: scale(.98); background: rgba(255,255,255,.08); }
+.btn.big { min-height: 60px; font-size: 15px; }
+.btn.primary { background: var(--ink); color: #0f172a; border-color: var(--ink); }
+.btn.primary:active { background: #e8ecf5; }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn[hidden] { display: none; }
+.btn-row { display: flex; gap: 10px; width: 100%; }
+.btn-row .btn { flex: 1; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.icon-btn:active { transform: scale(.94); }
+.icon-btn .ico-off { display: none; }
+.icon-btn.muted .ico-on { display: none; }
+.icon-btn.muted .ico-off { display: block; }
+.corner-btn { position: fixed; top: calc(var(--safe-top) + 12px); right: calc(var(--safe-right) + 14px); z-index: 10; }
+body[data-state="play"] .corner-btn, body[data-state="flight"] .corner-btn, body[data-state="ready"] .corner-btn, body[data-state="playing"] .corner-btn { opacity: .45; }
+/* inside the Game Box a back pill sits top-centre */
+.in-box .title-block { margin-top: 11vh; }
+.in-box #hud .hud-top { margin-top: 6vh; }
+
+/* ─── sheets: bottom on phones, centred on wide screens ─── */
+.menu .panel { pointer-events: auto; display: flex; flex-direction: column; gap: 12px; width: min(100%, 520px); max-height: calc(100dvh - var(--safe-top) - 24px); overflow: auto; padding: 14px 22px calc(var(--safe-bottom) + 18px); border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); animation: up .35s cubic-bezier(.2,.9,.2,1.05); }
+.menu .panel::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--line-2); margin: 0 auto 6px; }
+#over { justify-content: flex-end; padding-left: 0; padding-right: 0; padding-bottom: 0; background: rgba(0,0,0,.3); }
+@keyframes up { from { transform: translateY(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+.row { display: flex; justify-content: center; gap: 36px; }
+.stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.new-best { align-self: center; padding: 6px 14px; border: 1px solid var(--ink); border-radius: 999px; color: var(--ink); font-weight: 800; font-size: 11px; letter-spacing: .3em; text-transform: uppercase; }
+.new-best[hidden] { display: none; }
+.rule { width: 100%; height: 1px; background: var(--line); margin: 2px 0; }
+
+@media (min-width: 640px) and (min-height: 600px) {
+  #over { justify-content: center; padding: 20px; }
+  .menu .panel { border-radius: var(--r-lg); border-bottom: 1px solid var(--line); padding: 22px 24px 20px; }
+  .menu .panel::before { display: none; }
+}
+@media (max-height: 700px) { .title-block { margin-top: 3vh; } .logo { font-size: clamp(56px, 17vw, 88px); } .tagline { margin-top: 6px; font-size: 14px; } .score { font-size: 52px; } .big { font-size: 54px; } .btn { min-height: 52px; } }
+@media (prefers-reduced-motion: reduce) { .menu, .menu .panel, .tap-hint { animation: none; } }
+
+/* ─── shared extras: tutorial, challenge banner, versus, toast ─── */
+.tutorial { z-index: 30; background: rgba(0,0,0,.45); justify-content: flex-end; padding: 0; }
+.tutorial .panel { text-align: center; gap: 14px; }
+.tut-dots { display: flex; justify-content: center; gap: 6px; }
+.tut-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); }
+.tut-dots i.on { background: var(--ink); }
+.tut-art { height: 140px; display: grid; place-items: center; }
+.tut-art svg { width: 160px; height: 120px; }
+.tut-title { font-size: 20px; font-weight: 900; letter-spacing: .02em; }
+.tut-text { margin: 0 auto; max-width: 300px; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.skip-tut { border: 0; min-height: 44px; color: var(--ink-3); font-size: 11px; }
+.banner { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; width: min(100%, 360px); padding: 12px 14px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--surface); text-align: left; pointer-events: auto; }
+.banner[hidden] { display: none; }
+.banner-text b { display: block; font-size: 14px; }
+.banner-text small { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.btn.small { width: auto; min-height: 44px; padding: 8px 16px; font-size: 12px; }
+.versus { padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); font-size: 14px; font-weight: 700; }
+.versus[hidden] { display: none; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 28px); transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 999px; background: #fff; color: #0f172a; font-weight: 800; font-size: 12px; letter-spacing: .06em; }
+.toast[hidden] { display: none; }
+@media (min-width: 640px) and (min-height: 600px) { .tutorial { justify-content: center; padding: 20px; } }
+.link-sheet { z-index: 35; background: rgba(0,0,0,.45); justify-content: flex-end; padding: 0; }
+.link-sheet .panel { text-align: center; }
+.link-input { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); background: rgba(0,0,0,.3); color: var(--ink); font: inherit; font-size: 13px; text-align: center; -webkit-user-select: text; user-select: text; }
+.help-btn { right: auto; left: calc(var(--safe-left) + 14px); }
+body:not([data-state="title"]) .help-btn { display: none; }
+.in-box .help-btn, .in-box .corner-btn { top: calc(var(--safe-top) + 58px); }
+@media (min-width: 640px) and (min-height: 600px) { .link-sheet { justify-content: center; padding: 20px; } }

@@ -1,0 +1,14 @@
+{
+  "name": "melt",
+  "version": "1.0.0",
+  "description": "MELT — hold to heat, release to cool. A hyper-casual runner where your state of matter is the only control.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "npx http-server . -p 8080 -c-1",
+    "test": "node --test tests/*.test.js",
+    "icons": "node tools/make-icon.mjs && node tools/render-art.mjs",
+    "screens": "node tools/render-art.mjs --screens"
+  },
+  "license": "MIT"
+}
