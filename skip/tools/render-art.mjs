@@ -17,7 +17,7 @@ function loadPlaywright() {
 const { chromium } = loadPlaywright();
 const ROOT = resolve(import.meta.dirname, '..');           // skip/
 const REPO = resolve(ROOT, '..');                           // serve the repo so ../switcher.js resolves
-const PORT = 8094, BASE = `http://127.0.0.1:${PORT}/skip/`;
+const PORT = Number(process.env.PORT) || 8094, BASE = `http://127.0.0.1:${PORT}/skip/`;
 const wantScreens = process.argv.includes('--screens');
 
 async function startServer() {

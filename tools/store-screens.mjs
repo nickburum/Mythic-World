@@ -14,7 +14,7 @@ import { resolve } from 'node:path';
 const require = createRequire(import.meta.url);
 function loadPlaywright() { try { return require('playwright'); } catch {} for (const p of (process.env.NODE_PATH || '').split(':').concat(['/opt/node-tools/node_modules', '/usr/lib/node_modules'])) { try { return createRequire(resolve(p, 'x.js'))('playwright'); } catch {} } throw new Error('playwright not found'); }
 const { chromium } = loadPlaywright();
-const ROOT = resolve(import.meta.dirname, '..'); const PORT = 8086; const BASE = `http://127.0.0.1:${PORT}/`;
+const ROOT = resolve(import.meta.dirname, '..'); const PORT = Number(process.env.PORT) || 8086; const BASE = `http://127.0.0.1:${PORT}/`;
 const SIZES = { '6.7': { w: 430, h: 932, out: '1290x2796' }, '6.5': { w: 428, h: 926, out: '1284x2778' } };
 const only = process.argv.includes('--size') ? process.argv[process.argv.indexOf('--size') + 1] : null;
 

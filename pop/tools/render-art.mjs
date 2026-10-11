@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 function loadPlaywright() { try { return require('playwright'); } catch {} for (const p of (process.env.NODE_PATH || '').split(':').concat(['/opt/node-tools/node_modules', '/usr/lib/node_modules'])) { try { return createRequire(resolve(p, 'x.js'))('playwright'); } catch {} } throw new Error('playwright not found'); }
 const { chromium } = loadPlaywright();
 const ROOT = resolve(import.meta.dirname, '..'), REPO = resolve(ROOT, '..');
-const PORT = 8089, BASE = `http://127.0.0.1:${PORT}/pop/`;
+const PORT = Number(process.env.PORT) || 8089, BASE = `http://127.0.0.1:${PORT}/pop/`;
 const wantScreens = process.argv.includes('--screens');
 async function startServer() { const proc = spawn('npx', ['http-server', REPO, '-p', String(PORT), '-s', '-c-1'], { stdio: 'ignore' }); for (let i = 0; i < 50; i++) { try { if ((await fetch(BASE)).ok) return proc; } catch {} await new Promise(r => setTimeout(r, 200)); } proc.kill(); throw new Error('server did not start'); }
 async function renderIcons(browser) {

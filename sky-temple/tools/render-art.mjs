@@ -23,7 +23,7 @@ const { chromium } = loadPlaywright();
 
 const ROOT = resolve(import.meta.dirname, '..');            // sky-temple/
 const REPO = resolve(ROOT, '..');
-const PORT = 8099;
+const PORT = Number(process.env.PORT) || 8099;
 const BASE = `http://127.0.0.1:${PORT}/sky-temple/`;
 const wantScreens = process.argv.includes('--screens');
 

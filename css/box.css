@@ -50,10 +50,10 @@ body[data-view="game"] .home { display: none; }
 .player { position: fixed; inset: 0; z-index: 5; background: #000; }
 .player[hidden] { display: none; }
 .frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
-.back-pill { position: absolute; top: calc(var(--safe-top) + 10px); left: 50%; transform: translateX(-50%); z-index: 7; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: rgba(8,12,24,.78); color: #fff; font-weight: 800; font-size: 11px; letter-spacing: .24em; text-transform: uppercase; cursor: pointer; transition: opacity .3s; }
-.back-pill svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.back-pill:active { transform: translateX(-50%) scale(.96); }
-.player.quiet .back-pill { opacity: .35; }
+.back-pill { position: absolute; top: calc(var(--safe-top) + 12px); left: calc(var(--safe-left, 0px) + 14px); z-index: 7; display: inline-flex; align-items: center; gap: 4px; height: 44px; padding: 0 16px 0 10px; border: 1px solid var(--line-2); border-radius: 999px; background: rgba(8,12,24,.78); color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; transition: opacity .3s, transform .26s cubic-bezier(.34,1.56,.64,1); }
+.back-pill svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.back-pill:active { transform: scale(.94); transition-duration: .09s; }
+.player.quiet .back-pill { opacity: .6; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); transition: opacity .3s; }
 .loading.done { opacity: 0; pointer-events: none; }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--line); border-top-color: #fff; animation: spin .8s linear infinite; }
