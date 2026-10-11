@@ -16,18 +16,20 @@ Tick top to bottom. Each line names where you do it. The code side is done; the 
 - [ ] Five Game Center leaderboards created with the IDs in `ios/APPLE-SETUP.md` §5.
 - [ ] App Privacy answered (see `store/METADATA.md`).
 - [ ] Age rating completed (4+).
-- [ ] Privacy policy URL live (publish `store/PRIVACY.md`).
+- [ ] Privacy policy URL live: `https://nickburum.github.io/Mythic-World/privacy/` (deploys with the site once this branch is merged to main).
 - [ ] Metadata pasted from `store/METADATA.md` (name, subtitle, description, keywords, promo text, URLs).
-- [ ] Screenshots uploaded from `store/screens/1290x2796` and `store/screens/1284x2778` (run `node tools/store-screens.mjs`).
+- [ ] Screenshots uploaded from `store/screens/1290x2796` and `store/screens/1284x2778` (7 each, already rendered; re-run `node tools/store-screens.mjs` after visual changes).
+- [ ] In-App Purchase created: *Monetization ▸ In-App Purchases ▸ +* ▸ Non-Consumable, Product ID **`com.mythicworld.gamebox.adfree`**, reference name "Go ad-free", price tier of your choice (US$2.99 suggested), review screenshot = the Settings sheet. Attach it to the first version.
 
 ## D. Ads (optional for TestFlight, required before release)
-- [ ] AdMob app + rewarded unit created; IDs pasted into `ios/project.yml` and `ios/GameBox/AdsBridge.swift`.
+- [ ] AdMob app + rewarded unit created; both IDs pasted into `ios/project.yml` (`GADApplicationIdentifier`, `GADRewardedUnitID`). Debug builds keep Google's test IDs automatically; `fastlane release` refuses to ship test IDs.
+- [ ] AdMob ▸ Privacy & messaging: GDPR message published (the app shows Google's consent form in the EU/UK). App settings ▸ "directed to children": No (the in-app age question tags under-13 players).
 - [ ] AdMob payments profile complete.
 
 ## E. TestFlight
 - [ ] Product ▸ Archive ▸ Distribute ▸ App Store Connect ▸ Upload.
 - [ ] Internal testers added; build installed on a real phone.
-- [ ] Smoke on device: every game plays; sound on; Continue shows a test ad; delete + reinstall restores scores; a challenge link opens the web version.
+- [ ] Smoke on device: every game plays; sound mixes with your music; on the 4th run the age question appears once, then Continue shows a test ad; Go ad-free in sandbox removes the ad (Restore brings it back after reinstall); Control Center pauses a run; delete + reinstall restores scores and streak; a challenge link opens the web version; today's run from the hub's Today card.
 
 ## F. Submit
 - [ ] Review notes pasted (`store/METADATA.md`).

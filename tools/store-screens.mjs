@@ -36,6 +36,11 @@ const FRAMES = [
 const SEED_STORAGE = { 'pop.best': '64', 'skytemple.best': '41', 'orbit.best': '57', 'melt.best': '38', 'skip.board': JSON.stringify([{ score: 412.6, tag: 'YOU', at: 1 }]), 'skip.name': '"YOU"', 'gamebox.last': '"sky-temple"',
   'gamebox.tutorials': JSON.stringify({ melt: true, pop: true, orbit: true, 'sky-temple': true, skip: true }),
   'gamebox.coach': JSON.stringify(Object.fromEntries(['pop.rule', 'pop.chain', 'pop.switch', 'orbit.reverse', 'sky-temple.drop', 'sky-temple.cut'].map(k => [k, true]))) };
+// a returning player is mid-streak and a few levels in (dates are relative to today, so the hub reads right on any day)
+const dkey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return dkey(d); };
+Object.assign(SEED_STORAGE, { 'gamebox.xp': '980', 'gamebox.days': JSON.stringify([6, 5, 4, 3, 2, 1].map(ago)), 'gamebox.streak': JSON.stringify({ count: 6, best: 6, last: ago(1), shield: 0 }) });
+
 /** Store frames show the game, not the box's chrome. */
 const HIDE_CHROME = '.back-pill, .corner-btn, .help-btn, .gsw-handle, .gsw, .coach, #toast { display: none !important; }';
 

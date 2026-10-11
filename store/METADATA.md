@@ -9,7 +9,7 @@ Copy these fields into App Store Connect ▸ your app ▸ *App Store* tab. Chara
 `One finger. Endless replays.`
 
 ## Promotional text (170, editable without a new build)
-`Five tiny games in one box. Skip stones at sunset, pop bubbles, dodge on a ring, change state, stack to the sky. Free, offline, no account.`
+`A new daily run every day: same game, same seed, for everyone. Keep your streak, level up across five one-tap games. Free, offline, no account.`
 
 ## Description (4000)
 ```
@@ -17,16 +17,20 @@ Five games. One finger. No downloads inside, no accounts, no waiting.
 
 Open the box, pick a game, play in seconds. Every game is one-touch, lasts about a minute, and gets harder the longer you last. Beat your best, challenge a friend on the exact same run, and climb the Game Center leaderboards.
 
+A NEW RUN EVERY DAY
+Each day one game hosts the Daily Run: the same course for every player in the world. Play it to keep your streak alive. Every run in every game earns XP, so you level up whichever game you love.
+
 THE GAMES
-• SKIP — Skip a stone across a sunset lake. Tap when it kisses the water. Chase the glowing motes, dodge the lily pads, and run from golden hour into a sky full of stars.
-• MELT — Tap to change state. Ice smashes glass, water flows through pipes, steam floats over spikes. Be the right one when it counts.
-• POP — Pop the bubbles that match the colour. Three lives. The colour keeps changing.
-• ORBIT — One tap reverses your comet. Dodge the red arcs, sweep up the gems.
+• POP — Pop the bubbles that match. Touching bubbles pop together, so wait for the big chain if you dare. Ten in a row starts a FRENZY.
 • SKY TEMPLE — Tap to drop stones on the tower. Land perfectly and they grow back.
+• SKIP — Skip a stone across a sunset lake. Tap as it meets its reflection. Chase the glowing motes, dodge the lily pads, and run from golden hour into a sky full of stars.
+• ORBIT — One tap reverses your comet. Hold your line to build a momentum multiplier; slip through a closing wall for a bonus.
+• MELT — Tap to change state. Ice smashes glass, water flows through pipes, steam floats over spikes. Be the right one when it counts.
 
 MADE FOR PHONES
 • Everything is one tap, thumb-first, portrait.
-• Each game has its own music and a 20-second tutorial.
+• Each game has its own music and teaches you while you play: no slideshows.
+• Colour-blind friendly: POP's bubbles carry shapes as well as colours.
 • Your best scores back up to iCloud and follow you to a new phone.
 • Challenge friends: send a link, they play the identical run, the result says who won.
 • Game Center leaderboards for every game.
