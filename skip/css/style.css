@@ -95,3 +95,8 @@ html, body { background: #1a2a4a; }
 .in-box .title-block { margin-top: 10vh; }
 
 @media (max-height: 700px) { .start { gap: 10px; } .menu-list { gap: 8px; } .tap-start { font-size: 12px; } }
+
+/* the in-run distance is the score: same scale as every other game's */
+.distance { font-size: clamp(56px, 18vw, 92px); font-weight: 900; line-height: 1; text-shadow: 0 6px 30px rgba(0,0,0,.35); transform-origin: center; }
+.distance .unit { font-size: .4em; margin-left: 4px; letter-spacing: 0; }
+.btn-row .btn { white-space: nowrap; padding-inline: 12px; letter-spacing: .14em; font-size: 13px; }
