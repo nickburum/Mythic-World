@@ -6,14 +6,16 @@
 import { GAMES, byId, readBest, formatBest, applySettings, SCORE_KEYS, gcScore } from './games.js';
 import { Cloud } from './cloud.js';
 import { shareHere } from './share.js';
+import { haptics } from './haptics.js';
 
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-const vibrate = (ms) => { try { if (LS.get('gamebox.settings', { haptics: true }).haptics && navigator.vibrate) navigator.vibrate(ms); } catch {} };
+const vibrate = (ms) => haptics.pulse(ms);
 
 class Box {
   constructor() {
     this.settings = LS.get('gamebox.settings', { sound: true, haptics: true, quality: 'auto' });
+    haptics.setEnabled(this.settings.haptics !== false);
     this.current = null;
     this.ui = { grid: $('grid'), hero: $('hero'), heroBtn: $('hero-btn'), heroIcon: $('hero-icon'), heroName: $('hero-name'), heroBest: $('hero-best'), heroTitle: $('hero-title'), heroTagline: $('hero-tagline'),
       soundBtn: $('toggle-sound'), soundOn: $('sound-on'), soundOff: $('sound-off'),
@@ -66,18 +68,21 @@ class Box {
     $('open-settings').addEventListener('click', () => { vibrate(8); this.ui.settings.hidden = false; });
     this.ui.soundBtn.addEventListener('click', () => { this.ui.optSound.checked = !this.ui.optSound.checked; this.ui.optSound.dispatchEvent(new Event('change')); });
     for (const el of document.querySelectorAll('[data-close]')) el.addEventListener('click', () => { this.ui.settings.hidden = true; });
-    const save = () => { this.settings = { sound: this.ui.optSound.checked, haptics: this.ui.optHaptics.checked, quality: this.ui.optQuality.value }; LS.set('gamebox.settings', this.settings); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); this.syncSound(); vibrate(6); };
+    const save = () => { this.settings = { sound: this.ui.optSound.checked, haptics: this.ui.optHaptics.checked, quality: this.ui.optQuality.value }; LS.set('gamebox.settings', this.settings); haptics.setEnabled(this.settings.haptics); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); this.syncSound(); vibrate(6); };
     this.syncSound();
     this.ui.optSound.addEventListener('change', save); this.ui.optHaptics.addEventListener('change', save); this.ui.optQuality.addEventListener('change', save);
     $('replay-tutorials').addEventListener('click', () => { localStorage.removeItem('gamebox.tutorials'); this.toast('Tutorials will show again'); });
-    $('reset-scores').addEventListener('click', () => {
-      if (!confirm('Reset every best score in the box?')) return;
-      for (const k of SCORE_KEYS) localStorage.removeItem(k);
+    // two taps to reset (window.confirm is a silent no-op inside WKWebView); also forgets the iCloud copy
+    const reset = $('reset-scores'); let armed = 0;
+    reset.addEventListener('click', () => {
+      if (Date.now() - armed > 4000) { armed = Date.now(); reset.textContent = 'Tap again to reset every score'; reset.classList.add('armed'); setTimeout(() => { reset.textContent = 'Reset all scores'; reset.classList.remove('armed'); }, 4000); return; }
+      armed = 0; reset.textContent = 'Reset all scores'; reset.classList.remove('armed');
+      this.cloud.remove([...SCORE_KEYS, 'gamebox.gcSent']);
       localStorage.removeItem('gamebox.last');
       this.refreshBests(); this.toast('Scores reset');
     });
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!this.ui.settings.hidden) this.ui.settings.hidden = true; else if (this.current) this.close(); } });
-    window.addEventListener('hashchange', () => { const m = location.hash.match(/play=([a-z-]+)/); if (m && byId(m[1]) && (!this.current || this.current.id !== m[1])) this.open(m[1]); else if (!m && this.current) this.close(false); });
+    window.addEventListener('hashchange', () => { const m = location.hash.match(/play=([a-z-]+)/); if (m && byId(m[1]) && (!this.current || this.current.id !== m[1])) this.open(m[1], location.hash.replace(/^#play=[a-z-]+&?/, '#')); else if (!m && this.current) this.close(false); });
     this.ui.frame.addEventListener('load', () => { this.ui.loading.classList.add('done'); });
     // games inside the box hand their share requests up here, where the permissions live
     window.addEventListener('message', (e) => { const d = e.data; if (d && d.type === 'gamebox:share') shareHere({ title: d.title, text: d.text, url: d.url }, { toast: (t) => this.toast(t) }); });
@@ -101,8 +106,12 @@ class Box {
   }
 
   close(pop = true) {
-    this.current = null;
-    this.ui.frame.src = 'about:blank';           // stops audio and the game loop
+    const g = this.current; this.current = null;
+    // a game may have changed the sound setting from its own mute button: keep the hub in step
+    if (g) { try { const m = localStorage.getItem(`${g.id === 'sky-temple' ? 'skytemple' : g.id}.muted`); if (m !== null) { const on = !JSON.parse(m); if (on !== this.settings.sound) { this.settings.sound = on; this.ui.optSound.checked = on; LS.set('gamebox.settings', this.settings); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); this.syncSound(); } } } catch {} }
+    try { this.ui.frame.contentWindow.postMessage({ type: 'gamebox:leaving' }, '*'); } catch {}
+    const frame = this.ui.frame; clearTimeout(this.closeT);
+    this.closeT = setTimeout(() => { if (!this.current) frame.src = 'about:blank'; }, 220);   // let the song fade, then stop the game loop
     this.ui.player.hidden = true;
     document.body.dataset.view = 'home';
     this.refreshBests();

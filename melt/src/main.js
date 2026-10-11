@@ -68,7 +68,7 @@ class App {
     window.addEventListener('orientationchange', () => this.onResize());
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
     this.extras = attachExtras({ id: 'melt', name: 'MELT', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
-      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx,
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx, sfx: this.sfx,
       titleTap: () => { if (this.state === STATE.TITLE) this.press(); } });
     this.extras.setMuted(this.muted);
     window.__melt = this;
@@ -142,7 +142,7 @@ class App {
     const d = this.death;
     this.ui.deathLine.textContent = d ? (DEATH_LINES[`${d.obstacle.type}:${d.phase}`] || '') : '';
     this.setState(STATE.OVER);
-    this.extras.onOver(score);
+    this.extras.onOver(score, { isBest });
   }
 
   /** Rewarded continue: back into the run where we died. */

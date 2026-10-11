@@ -31,7 +31,11 @@ export class Ads {
   /** Show a rewarded ad. Resolves true when the reward was earned. */
   show() {
     if (!this.available) return Promise.resolve(false);
-    if (bridge()) return new Promise((res) => { this.pending = res; this.post({ type: 'show' }); });
+    if (bridge()) return new Promise((res) => {
+      const t = setTimeout(() => { if (this.pending === done) { this.pending = null; this.ready = false; this.changed(); res(false); this.load(); } }, 60000);
+      const done = (ok) => { clearTimeout(t); res(ok); };
+      this.pending = done; this.post({ type: 'show' });
+    });
     return this.simulate();
   }
   simulate() {

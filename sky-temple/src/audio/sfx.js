@@ -14,7 +14,8 @@ export class Sfx {
     this.ctx = null;
     this.master = null;
     this.muted = false;
-    this.volume = 0.5;
+    this.volume = 0.7;
+    this.onSound = null;      // the box hooks this to duck the music under a cue
   }
 
   /** Create/resume the context. Must be called from a user gesture on iOS. */
@@ -27,12 +28,12 @@ export class Sfx {
       this.master.gain.value = this.muted ? 0 : this.volume;
       this.master.connect(this.ctx.destination);
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
   }
 
   setMuted(m) {
     this.muted = m;
-    if (this.master) this.master.gain.value = m ? 0 : this.volume;
+    if (this.master) this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.03);
   }
 
   get ready() {
@@ -40,18 +41,20 @@ export class Sfx {
   }
 
   /** One enveloped oscillator. */
-  tone({ freq, to = freq, type = 'sine', dur = 0.2, vol = 0.4, attack = 0.005, delay = 0 }) {
+  tone({ freq, to = freq, type = 'sine', dur = 0.2, vol = 0.4, attack = 0.005, delay = 0, cutoff = 0 }) {
     if (!this.ready) return;
+    if (this.onSound && vol >= 0.1) this.onSound();
     const c = this.ctx, t0 = c.currentTime + delay;
     const o = c.createOscillator();
     const g = c.createGain();
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff || 12000;
     o.type = type;
     o.frequency.setValueAtTime(freq, t0);
     if (to !== freq) o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t0 + dur);
     g.gain.setValueAtTime(0, t0);
     g.gain.linearRampToValueAtTime(vol, t0 + attack);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-    o.connect(g).connect(this.master);
+    o.connect(f).connect(g).connect(this.master);
     o.start(t0);
     o.stop(t0 + dur + 0.02);
   }
@@ -101,9 +104,12 @@ export class Sfx {
 
   /** Missed the tower. */
   miss() {
-    this.tone({ freq: 220, to: 55, type: 'sawtooth', dur: 0.6, vol: 0.25 });
-    this.noise({ dur: 0.35, vol: 0.4, cutoff: 500, delay: 0.25 });
+    this.tone({ freq: 220, to: 55, type: 'triangle', dur: 0.45, vol: 0.25, cutoff: 1500 });
+    this.noise({ dur: 0.3, vol: 0.35, cutoff: 600, delay: 0.05 });
   }
+
+  /** New best. */
+  newBest() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.5, vol: 0.16, delay: i * 0.09 })); }
 
   /** Zone reached. */
   milestone() {

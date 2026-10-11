@@ -11,12 +11,20 @@ import GoogleMobileAds
 final class AdsBridge: NSObject, WKScriptMessageHandler {
     weak var webView: WKWebView?
     weak var presenter: UIViewController?
-    /// Google's public TEST rewarded unit. Replace with your own from AdMob before release.
-    static let rewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
+    /// Debug builds use Google's public TEST rewarded unit; release builds read `GADRewardedUnitID`
+    /// from Info.plist (set it in ios/project.yml from your AdMob console). Never ship the test unit.
+    static var rewardedUnitID: String {
+        #if DEBUG
+        return "ca-app-pub-3940256099942544/1712485313"
+        #else
+        return (Bundle.main.object(forInfoDictionaryKey: "GADRewardedUnitID") as? String) ?? ""
+        #endif
+    }
 
     #if canImport(GoogleMobileAds)
     private var rewarded: GADRewardedAd?
     private var loading = false
+    private var watcher: AdDismissWatcher?      // fullScreenContentDelegate is weak: we must own it
     #endif
 
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -30,7 +38,7 @@ final class AdsBridge: NSObject, WKScriptMessageHandler {
 
     private func load() {
         #if canImport(GoogleMobileAds)
-        guard !loading else { return }
+        guard !loading, !Self.rewardedUnitID.isEmpty else { if Self.rewardedUnitID.isEmpty { call("onReady", "false") }; return }
         loading = true
         GADRewardedAd.load(withAdUnitID: Self.rewardedUnitID, request: GADRequest()) { [weak self] ad, error in
             guard let self = self else { return }
@@ -48,10 +56,13 @@ final class AdsBridge: NSObject, WKScriptMessageHandler {
         #if canImport(GoogleMobileAds)
         guard let ad = rewarded, let vc = presenter else { call("onResult", "{\"rewarded\":false}"); return }
         var earned = false
-        ad.fullScreenContentDelegate = AdDismissWatcher { [weak self] in
-            self?.rewarded = nil
-            self?.call("onResult", "{\"rewarded\":\(earned)}")
+        watcher = AdDismissWatcher { [weak self] in
+            guard let self = self else { return }
+            self.rewarded = nil; self.watcher = nil
+            self.call("onResult", "{\"rewarded\":\(earned)}")
+            self.load()                                   // pre-load the next one
         }
+        ad.fullScreenContentDelegate = watcher
         ad.present(fromRootViewController: vc) { earned = true }
         #else
         call("onResult", "{\"rewarded\":false}")

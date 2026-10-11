@@ -17,8 +17,9 @@
  *   over: '#over', retry: '#retry', title: '#title',   // selectors
  *   audioContext(),               // () => AudioContext|null (after the game unlocked audio)
  *   titleTap(),                   // called when the player taps the title screen itself (logo, hint, empty space)
+ *   sfx,                          // the game's Sfx (optional): its sounds duck the music
  * })
- * Returns { music, beforeStart(cb), onOver(score), onStart(), onTitle(), unlock(), challenge }
+ * Returns { music, beforeStart(cb), onOver(score, { isBest }), onStart(), onTitle(), unlock(), challenge }
  */
 import { Music } from './music.js';
 import { ads } from './ads.js';
@@ -33,16 +34,19 @@ export function attachExtras(o) {
   const over = document.querySelector(o.over), title = document.querySelector(o.title), retry = document.querySelector(o.retry);
   const panel = over.querySelector('.panel') || over;
   const music = new Music(o.song);
+  if (o.sfx) o.sfx.onSound = () => music.duck();
+  // the hub tells us it is about to close the game: fade the song instead of cutting it
+  window.addEventListener('message', (e) => { if (e.data && e.data.type === 'gamebox:leaving') music.stop(0.12); });
   const state = { challenge: null, incoming: null, usedContinue: false, lastScore: 0 };
   const tag = () => cleanTag(LS.get('skip.name', 'YOU'));     // one tag for the whole box
 
   /* ─── result sheet buttons ─── */
-  const cont = el(`<button class="btn primary big" type="button" hidden>Continue · watch an ad</button>`);
+  const cont = el(`<button class="btn continue-btn" type="button" hidden>Continue · watch an ad</button>`);
   const chal = el(`<button class="btn" type="button">Challenge a friend</button>`);
   const versus = el(`<div class="versus" hidden></div>`);
-  panel.insertBefore(cont, retry);
   if (!panel.querySelector('.versus')) panel.insertBefore(versus, retry);
-  panel.insertBefore(chal, retry.nextSibling);
+  panel.insertBefore(cont, retry.nextSibling);        // outline, under Play again: the ad is an offer, not the main action
+  panel.insertBefore(chal, cont.nextSibling);
 
   /* ─── challenge banner on the title ─── */
   const banner = el(`<div class="banner" hidden><div class="banner-text"><b></b><small></small></div><button class="btn primary small" type="button">Accept</button></div>`);
@@ -81,7 +85,8 @@ export function attachExtras(o) {
     if (ok && o.revive()) { state.usedContinue = true; cont.hidden = true; music.setMode('play'); }
   });
   ads.onChange(() => refreshContinue());
-  function refreshContinue() { cont.hidden = !(ads.available && !state.usedContinue && typeof o.revive === 'function' && over && !over.hidden); }
+  const runs = () => LS.get(`${o.id}.games`, 0) || 0;     // no ad offer in the first three runs: learn first, then the bridge
+  function refreshContinue() { cont.hidden = !(ads.available && !state.usedContinue && typeof o.revive === 'function' && over && !over.hidden && runs() >= 3); }
 
   /* ─── title: taps on the logo / hint / empty space start the game; a ? button replays the tutorial ─── */
   if (o.titleTap) title.addEventListener('pointerdown', (e) => { if (e.target.closest('button, input, select, a, .banner')) return; e.preventDefault(); o.titleTap(); }, { passive: false });
@@ -115,8 +120,9 @@ export function attachExtras(o) {
     unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); } },
     onTitle() { music.setMode('title'); },
     onStart(seed) { state.usedContinue = false; if (seed === undefined) state.challenge = null; cont.hidden = true; versus.hidden = true; music.setMode('play'); },
-    onOver(score) {
+    onOver(score, info = {}) {
       state.lastScore = score; music.setMode('over');
+      if (info.isBest && score > 0) { if (o.sfx && o.sfx.newBest) o.sfx.newBest(); else music.stingBest(); } else music.stingOver();
       if (state.challenge) { const d = score - state.challenge.score; versus.textContent = d > 0 ? `You beat ${state.challenge.tag} by ${fmt(d, o.unit)}` : d < 0 ? `${state.challenge.tag} wins by ${fmt(-d, o.unit)}` : `Dead heat with ${state.challenge.tag}`; versus.hidden = false; chal.textContent = 'Send result'; }
       else { versus.hidden = true; chal.textContent = 'Challenge a friend'; }
       requestAnimationFrame(refreshContinue);

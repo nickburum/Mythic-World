@@ -8,8 +8,8 @@ export class Sfx {
     this.ctx = null;
     this.master = null;
     this.muted = false;
-    this.volume = 0.5;
-    this.heatGain = null;
+    this.volume = 0.7;
+    this.onSound = null;      // the box hooks this to duck the music under a cue
   }
 
   unlock() {
@@ -20,38 +20,16 @@ export class Sfx {
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : this.volume;
       this.master.connect(this.ctx.destination);
-      this.startHeatBed();
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
   }
 
-  setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : this.volume; }
+  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.03); }
   get ready() { return !!this.ctx && !this.muted; }
-
-  /** Looping filtered noise whose level follows the heat input. */
-  startHeatBed() {
-    const c = this.ctx;
-    const len = c.sampleRate * 2;
-    const buf = c.createBuffer(1, len, c.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    const src = c.createBufferSource();
-    src.buffer = buf; src.loop = true;
-    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200; f.Q.value = 0.6;
-    this.heatGain = c.createGain(); this.heatGain.gain.value = 0;
-    src.connect(f).connect(this.heatGain).connect(this.master);
-    src.start();
-  }
-
-  /** Call every frame: 0..1 how hard we are heating. */
-  setHeat(level) {
-    if (!this.heatGain) return;
-    const t = this.ctx.currentTime;
-    this.heatGain.gain.setTargetAtTime(level * 0.08, t, 0.05);
-  }
 
   tone({ freq, to = freq, type = 'sine', dur = 0.2, vol = 0.4, attack = 0.005, delay = 0 }) {
     if (!this.ready) return;
+    if (this.onSound && vol >= 0.1) this.onSound();
     const c = this.ctx, t0 = c.currentTime + delay;
     const o = c.createOscillator(), g = c.createGain();
     o.type = type;
@@ -101,6 +79,7 @@ export class Sfx {
     else if (phase === 'water') { this.noise({ dur: 0.25, vol: 0.45, cutoff: 700 }); this.tone({ freq: 400, to: 90, type: 'sine', dur: 0.35, vol: 0.3 }); }
     else { this.noise({ dur: 0.6, vol: 0.4, cutoff: 1500, type: 'bandpass' }); this.tone({ freq: 500, to: 120, type: 'sine', dur: 0.5, vol: 0.2 }); }
   }
+  newBest() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.5, vol: 0.16, delay: i * 0.09 })); }
   milestone() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone({ freq: f, type: 'triangle', dur: 0.45, vol: 0.16, delay: i * 0.08 })); }
   tap() { this.tone({ freq: 880, to: 660, type: 'sine', dur: 0.08, vol: 0.15 }); }
 }

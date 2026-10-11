@@ -62,7 +62,7 @@ class App {
 
     // test hook (used by tools/render-art.mjs to script screenshots)
     this.extras = attachExtras({ id: 'sky-temple', name: 'Sky Temple', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
-      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx,
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.game.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx, sfx: this.sfx,
       titleTap: () => { if (this.state === STATE.TITLE) this.tap(); } });
     this.extras.setMuted(this.muted);
     window.__skyTemple = this;
@@ -150,7 +150,7 @@ class App {
     this.ui.newBest.hidden = !isBest || score === 0;
     this.ui.overCombo.textContent = this.game.bestCombo >= 3 ? `Best streak ×${this.game.bestCombo}` : '';
     this.setState(STATE.OVER);
-    this.extras.onOver(score);
+    this.extras.onOver(score, { isBest });
   }
 
   /** Rewarded continue: a fresh stone slides in, the tower and score stay. */

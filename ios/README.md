@@ -38,8 +38,11 @@ Every time the web code changes, re-run `bash ios/bootstrap.sh` (or just
      (or change `LEADERBOARD_ID` in `skip/src/main.js`), format *Fixed point – 1 decimal*, high‑to‑low.
    - Add boards for the other games later with the same pattern; each game passes its own ID
      through the shared bridge.
-3. **App Privacy**: the box stores scores on device only and makes no network calls
-   (answer "No" to data collection). Encryption: `ITSAppUsesNonExemptEncryption` is already `false`.
+3. **App Privacy**: scores live on device + the player's own iCloud; Game Center and the rewarded
+   ad SDK do collect data — use the table in `store/METADATA.md` (identifiers + usage data for
+   third‑party advertising, Game Center data linked to the player). Tracking: the box does **not**
+   call the ATT prompt, so answer "No, we do not track" and serve non‑personalised ads (the consent
+   flow in `GameBoxApp.swift` handles EU/UK). Encryption: `ITSAppUsesNonExemptEncryption` is `false`.
 
 ## 3. TestFlight
 **From Xcode**: Product ▸ **Archive** ▸ *Distribute App* ▸ *App Store Connect* ▸ Upload.

@@ -69,7 +69,8 @@ class App {
     window.addEventListener('resize', () => this.renderer.resize());
     window.addEventListener('orientationchange', () => this.renderer.resize());
     document.addEventListener('visibilitychange', () => this.onVisibility());
-    this.music = new Music(song); this.music.setMuted(this.muted);
+    this.music = new Music(song); this.music.setMuted(this.muted); this.sfx.onSound = () => this.music.duck();
+    window.addEventListener('message', (e) => { if (e.data && e.data.type === 'gamebox:leaving') this.music.stop(0.12); });
     this.setupContinue();
     window.__skip = this;
     this.startDemo();
@@ -211,7 +212,7 @@ class App {
     btn.addEventListener('click', async () => { btn.disabled = true; const ok = await ads.show(); btn.disabled = false; if (ok && this.revive()) { this.usedContinue = true; btn.hidden = true; } });
     ads.onChange(() => this.refreshContinue());
   }
-  refreshContinue() { this.ui.continue.hidden = !(ads.available && !this.usedContinue && this.state === STATE.SUNK && this.resultsShown); }
+  refreshContinue() { this.ui.continue.hidden = !(ads.available && !this.usedContinue && this.state === STATE.SUNK && this.resultsShown && this.games >= 3); }
   revive() {
     if (!this.game.revive()) return false;
     this.resultsShown = false; this.setState(STATE.FLIGHT); this.music.setMode('play'); this.hint('');
@@ -360,6 +361,7 @@ class App {
     this.ui.over.hidden = false;
     this.resultsShown = true;
     this.music.setMode('over'); this.refreshContinue();
+    if (isBest && e.distance >= 1) this.sfx.milestone(); else this.music.stingOver();
   }
 
   updateHud(force = false) {

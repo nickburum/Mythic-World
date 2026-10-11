@@ -41,3 +41,16 @@ test('music is deterministic and stays in key', () => {
 test('challenge codec is shared', () => {
   assert.deepEqual(decodeChallenge(encodeChallenge({ seed: 9, score: 12, tag: 'abc' })), { seed: 9, score: 12, tag: 'ABC' });
 });
+
+test('meta keys merge by their own rules', () => {
+  assert.equal(mergeValue('gamebox.xp', '120', '340'), '340');
+  assert.equal(mergeValue('gamebox.adfree', 'false', 'true'), 'true');
+  const d1 = JSON.stringify({ date: '2026-10-11', game: 'pop', seed: 1, best: 5, attempts: 1, done: true, claimed: false });
+  const d2 = JSON.stringify({ date: '2026-10-11', game: 'pop', seed: 1, best: 9, attempts: 3, done: true, claimed: true });
+  assert.deepEqual(JSON.parse(mergeValue('gamebox.daily', d1, d2)), { date: '2026-10-11', game: 'pop', seed: 1, best: 9, attempts: 3, done: true, claimed: true });
+  assert.equal(JSON.parse(mergeValue('gamebox.daily', d1, JSON.stringify({ date: '2026-10-09', best: 99 }))).best, 5, 'newer date wins');
+  const s1 = JSON.stringify({ count: 3, best: 3, last: '2026-10-10', shield: 0 }), s2 = JSON.stringify({ count: 4, best: 4, last: '2026-10-11', shield: 1 });
+  assert.deepEqual(JSON.parse(mergeValue('gamebox.streak', s1, s2)), { count: 4, best: 4, last: '2026-10-11', shield: 1 });
+  assert.deepEqual(JSON.parse(mergeValue('gamebox.days', '["2026-10-10"]', '["2026-10-09","2026-10-10"]')), ['2026-10-09', '2026-10-10']);
+  assert.deepEqual(JSON.parse(mergeValue('gamebox.unlocks', '{"skip.midnight":200}', '{"skip.midnight":100,"melt.ember":300}')), { 'skip.midnight': 100, 'melt.ember': 300 });
+});

@@ -23,7 +23,9 @@ async function renderScreens(browser) {
   const errors = [], shot = async (p, n) => { await p.screenshot({ path: resolve(ROOT, `art/screens/${n}.png`) }); console.log(`art/screens/${n}.png`); };
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   page.on('pageerror', e => errors.push(String(e))); page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); }); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(BASE + '?testads=1'); await page.waitForFunction(() => !!window.__pop); await page.waitForTimeout(1500);
+  await page.goto(BASE + '?testads=1'); await page.waitForFunction(() => !!window.__pop);
+  // the Continue offer only appears from the fourth run on: seed three earlier runs, then reload
+  await page.evaluate(() => localStorage.setItem('pop.games', '3')); await page.reload(); await page.waitForFunction(() => !!window.__pop); await page.waitForTimeout(1500);
   await shot(page, 'title');
   // first play: the Play button shows the tutorial, then starts the game
   await page.click('#play'); await page.waitForTimeout(400);

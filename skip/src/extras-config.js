@@ -1,7 +1,7 @@
 /** SKIP — its song and first-play tutorial. */
 export const song = {
   bpm: 72, root: 62, scale: 'major', seed: 3, swing: 0,
-  progression: [[0, 2, 4], [5, 0, 2], [3, 5, 0], [4, 6, 1]],
+  progression: [[0, 2, 4], [5, 0, 2], [3, 5, 0], [4, 6, 1], [0, 2, 4], [3, 5, 0], [1, 3, 5], [4, 6, 1]],
   bass: { type: 'sine', vol: 0.14, pattern: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] },
   pad: { type: 'sine', vol: 0.07, detune: 7 },
   lead: { type: 'sine', vol: 0.08, density: 0.3, octave: 2, decay: 0.9 },

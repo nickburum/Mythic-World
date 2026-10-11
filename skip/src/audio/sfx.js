@@ -5,7 +5,7 @@
  */
 const PENT = [0, 2, 4, 7, 9, 12, 14, 16, 19];
 export class Sfx {
-  constructor() { this.ctx = null; this.master = null; this.muted = false; this.volume = 0.55; this.bed = null; this.crickets = null; }
+  constructor() { this.ctx = null; this.master = null; this.muted = false; this.volume = 0.7; this.bed = null; this.crickets = null; this.onSound = null; }
   unlock() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
@@ -13,9 +13,9 @@ export class Sfx {
       this.master = this.ctx.createGain(); this.master.gain.value = this.muted ? 0 : this.volume; this.master.connect(this.ctx.destination);
       this.startBeds();
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
   }
-  setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : this.volume; }
+  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.03); }
   get ready() { return !!this.ctx && !this.muted; }
 
   noiseBuffer(sec) {
@@ -47,6 +47,7 @@ export class Sfx {
 
   tone({ freq, to = freq, type = 'sine', dur = 0.2, vol = 0.4, attack = 0.005, delay = 0 }) {
     if (!this.ready) return;
+    if (this.onSound && vol >= 0.1) this.onSound();
     const c = this.ctx, t0 = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.setValueAtTime(freq, t0);
     if (to !== freq) o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t0 + dur);

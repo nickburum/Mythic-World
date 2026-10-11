@@ -3,9 +3,10 @@ import { OrbitGame, autopilot } from './core/orbit.js';
 import { Renderer } from './render/renderer.js';
 import { attachExtras } from '../../src/extras.js';
 import { song, steps } from './extras-config.js';
+import { haptics } from '../../src/haptics.js';
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem('orbit.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem('orbit.' + k, JSON.stringify(v)); } catch {} } };
-const vib = (p, on) => { if (on && navigator.vibrate) navigator.vibrate(p); };
+const vib = (p, on) => { if (on) haptics.pulse(p); };
 const TAU = Math.PI * 2;
 class Fx {
   constructor() { this.parts = []; this.pops = []; }
@@ -16,14 +17,17 @@ class Fx {
   draw(c) { for (const p of this.parts) { c.globalAlpha = 1 - p.age / p.life; c.fillStyle = p.color; c.beginPath(); c.arc(p.x, p.y, p.size, 0, TAU); c.fill(); } c.globalAlpha = 1; c.textAlign = 'center'; c.textBaseline = 'middle'; for (const t of this.pops) { const k = t.age / t.life, e = 1 - Math.pow(1 - k, 3); c.save(); c.globalAlpha = k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1; c.translate(t.x, t.y - e * t.rise); c.font = `900 ${t.size}px ui-rounded, -apple-system, "SF Pro Rounded", "Segoe UI", Roboto, Arial, sans-serif`; c.lineWidth = 5; c.lineJoin = 'round'; c.strokeStyle = 'rgba(0,0,0,0.35)'; c.strokeText(t.text, 0, 0); c.fillStyle = t.color; c.fillText(t.text, 0, 0); c.restore(); } }
 }
 class Sfx {
-  constructor() { this.ctx = null; this.muted = false; }
-  unlock() { if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; this.ctx = new AC(); this.g = this.ctx.createGain(); this.g.gain.value = this.muted ? 0 : 0.5; this.g.connect(this.ctx.destination); } if (this.ctx.state === 'suspended') this.ctx.resume(); }
-  setMuted(m) { this.muted = m; if (this.g) this.g.gain.value = m ? 0 : 0.5; }
-  tone(f, to, type, dur, vol, delay = 0) { if (!this.ctx || this.muted) return; const t0 = this.ctx.currentTime + delay, o = this.ctx.createOscillator(), g = this.ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f, t0); if (to !== f) o.frequency.exponentialRampToValueAtTime(to, t0 + dur); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur); o.connect(g).connect(this.g); o.start(t0); o.stop(t0 + dur + 0.02); }
+  constructor() { this.ctx = null; this.muted = false; this.onSound = null; }
+  unlock() { if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; this.ctx = new AC(); this.g = this.ctx.createGain(); this.g.gain.value = this.muted ? 0 : 0.7; this.g.connect(this.ctx.destination); } if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
+  setMuted(m) { this.muted = m; if (this.g) this.g.gain.setTargetAtTime(m ? 0 : 0.7, this.ctx.currentTime, 0.03); }
+  tone(f, to, type, dur, vol, delay = 0, cutoff = 4000) { if (!this.ctx || this.muted) return; if (this.onSound && vol >= 0.1) this.onSound(); const t0 = this.ctx.currentTime + delay, o = this.ctx.createOscillator(), g = this.ctx.createGain(), lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = cutoff; o.type = type; o.frequency.setValueAtTime(f, t0); if (to !== f) o.frequency.exponentialRampToValueAtTime(to, t0 + dur); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur); o.connect(lp).connect(g).connect(this.g); o.start(t0); o.stop(t0 + dur + 0.02); }
+  noise(dur, vol, cutoff, delay = 0) { if (!this.ctx || this.muted) return; const c = this.ctx, t0 = c.currentTime + delay, len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len); const src = c.createBufferSource(); src.buffer = buf; const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff; const g = c.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur); src.connect(f).connect(g).connect(this.g); src.start(t0); }
+  newBest() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, f, 'triangle', 0.5, 0.16, i * 0.09)); }
+  milestone() { [659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, f, 'triangle', 0.35, 0.14, i * 0.07)); }
   reverse() { this.tone(400, 700, 'sine', 0.1, 0.18); }
   gem(n) { const f = 660 * Math.pow(2, ([0, 2, 4, 7, 9, 12, 14][Math.min(n % 7, 6)]) / 12); this.tone(f, f, 'triangle', 0.25, 0.2); this.tone(f * 2, f * 2, 'sine', 0.2, 0.08, 0.03); }
-  warn() { this.tone(180, 180, 'square', 0.08, 0.05); }
-  crash() { this.tone(300, 60, 'sawtooth', 0.5, 0.3); }
+  warn() { this.tone(740, 880, 'triangle', 0.06, 0.22); this.tone(1200, 1200, 'sine', 0.015, 0.12); }
+  crash() { this.tone(220, 55, 'triangle', 0.45, 0.25, 0, 1500); this.noise(0.3, 0.25, 600); }
   tap() { this.tone(880, 660, 'sine', 0.08, 0.12); }
 }
 class App {
@@ -51,7 +55,7 @@ class App {
     this.ui.mute.addEventListener('click', () => { this.muted = !this.muted; LS.set('muted', this.muted); this.sfx.setMuted(this.muted); this.sfx.unlock(); this.extras.setMuted(this.muted); this.extras.unlock(); this.ui.mute.classList.toggle('muted', this.muted); });
     window.addEventListener('resize', () => this.r.resize()); document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
     this.extras = attachExtras({ id: 'orbit', name: 'ORBIT', song, steps, unit: '', over: '#over', retry: '#retry', title: '#title',
-      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx,
+      start: (seed) => this.start(seed), score: () => this.game.score, seed: () => this.seed, revive: () => this.revive(), audioContext: () => this.sfx.ctx, sfx: this.sfx,
       titleTap: () => { if (this.state === 'title') { this.click(); this.extras.beforeStart(() => this.start()); } } });
     this.extras.setMuted(this.muted);
     window.__orbit = this; requestAnimationFrame((t) => this.frame(t));
@@ -71,7 +75,7 @@ class App {
     this.sfx.crash(); vib([40, 40, 60], this.haptics); const [x, y] = this.r.pt(this.game.angle); this.fx.burst(x, y, '#fff', 30, 320); this.fx.burst(x, y, '#ff5a6e', 20, 200);
     this.games++; LS.set('games', this.games); const isBest = e.score > this.best; if (isBest) { this.best = e.score; LS.set('best', this.best); }
     this.ui.overScore.textContent = e.score; this.ui.overBest.textContent = this.best; this.ui.best.textContent = this.best; this.ui.newBest.hidden = !isBest || e.score === 0;
-    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score); }, 700);
+    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score, { isBest }); }, 700);
   }
   frame(now) {
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); this.last = now; this.time += dt; this.stateTime += dt; const g = this.game;

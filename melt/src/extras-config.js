@@ -1,11 +1,11 @@
 /** MELT — its song and first-play tutorial. */
 export const song = {
   bpm: 112, root: 57, scale: 'pentMinor', seed: 11, swing: 0.08,
-  progression: [[0, 2, 4], [3, 0, 2], [1, 3, 0], [4, 1, 3]],
-  bass: { type: 'triangle', vol: 0.16, pattern: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0] },
+  progression: [[0, 2, 4], [3, 0, 2], [1, 3, 0], [4, 1, 3], [0, 2, 4], [2, 4, 1], [3, 0, 2], [4, 1, 3]],
+  bass: { type: 'triangle', vol: 0.16, pattern: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], patternB: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1] },
   pad: { type: 'sine', vol: 0.05, detune: 5 },
   lead: { type: 'triangle', vol: 0.1, density: 0.6, octave: 2, decay: 0.28 },
-  drums: { kick: true, hat: true, vol: 0.45 }, space: 0.3,
+  drums: { kick: true, hat: true, vol: 0.3 }, space: 0.3,
 };
 export const steps = [
   { title: 'Tap to change state', text: 'Every tap moves your drop one step: ice, water, steam, then back to ice.', art: `<svg viewBox="0 0 160 120" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="48" width="28" height="28" rx="7"/><path d="M80 44c-9 12-13 18-13 25a13 13 0 0 0 26 0c0-7-4-13-13-25z"/><path d="M118 70a9 9 0 0 1 2-18 11 11 0 0 1 21 3 8 8 0 0 1-2 15z"/><path d="M52 62h10M98 62h10" stroke-opacity=".5"/></svg>` },

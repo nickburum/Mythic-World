@@ -69,10 +69,14 @@ export function challengeFromUrl(href) {
  * the address (`…/#play=<game>&c=…`) so the link opens the box straight into
  * the right game; standalone, the game's own page.
  */
+/** Where challenge links point when the game is not served over http(s) (the iOS shell's gamebox:// scheme). */
+export const PUBLIC_BASE = 'https://nickburum.github.io/Mythic-World/';
+const isWeb = (href) => /^https?:/.test(href);
 export function challengeBase(gameId) {
   const inBox = typeof window !== 'undefined' && window.parent !== window;
-  if (inBox) { try { const u = new URL(window.parent.location.href); u.hash = ''; return { href: u.toString(), prefix: `play=${gameId}&` }; } catch { /* cross-origin: fall through */ } }
+  if (inBox) { try { const u = new URL(window.parent.location.href); u.hash = ''; return { href: isWeb(u.href) ? u.toString() : PUBLIC_BASE, prefix: `play=${gameId}&` }; } catch { /* cross-origin: fall through */ } }
   const u = new URL(window.location.href); u.hash = ''; u.searchParams.delete('box');
+  if (!isWeb(u.href)) return { href: PUBLIC_BASE, prefix: `play=${gameId}&` };
   return { href: u.toString(), prefix: '' };
 }
 

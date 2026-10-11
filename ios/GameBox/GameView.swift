@@ -2,10 +2,12 @@
 import SwiftUI
 import WebKit
 import Combine
+import AVFoundation
 
 struct GameView: UIViewControllerRepresentable {
-    /// Deep links (gamebox://play/skip, challenge links) arrive here and are forwarded to the page.
-    static let pendingDeepLink = PassthroughSubject<URL, Never>()
+    /// Deep links (gamebox://play/skip, challenge links, universal links) arrive here and are forwarded to the page.
+    /// CurrentValueSubject replays the last link, so one that launched the app survives until the page is ready.
+    static let pendingDeepLink = CurrentValueSubject<URL?, Never>(nil)
     func makeUIViewController(context: Context) -> GameViewController { GameViewController() }
     func updateUIViewController(_ vc: GameViewController, context: Context) {}
 }
@@ -18,7 +20,10 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
     private let haptics = HapticsBridge()
     private let cloud = CloudBridge()
     private let adsBridge = AdsBridge()
+    private let store = StoreBridge()
     private var links = Set<AnyCancellable>()
+    private var pendingLink: URL?
+    private var pageReady = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,8 +37,10 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         config.userContentController.add(haptics, name: "haptics")
         config.userContentController.add(cloud, name: "cloud")
         config.userContentController.add(adsBridge, name: "ads")
+        config.userContentController.add(store, name: "store")
         // iOS Safari has no Vibration API; games call the `haptics` handler when present.
-        config.userContentController.addUserScript(WKUserScript(source: "window.__gameBoxNative = { platform: 'ios' };", injectionTime: .atDocumentStart, forMainFrameOnly: false))
+        let otherAudio = AVAudioSession.sharedInstance().isOtherAudioPlaying ? "true" : "false"
+        config.userContentController.addUserScript(WKUserScript(source: "window.__gameBoxNative = { platform: 'ios', otherAudio: \(otherAudio) };", injectionTime: .atDocumentStart, forMainFrameOnly: false))
 
         webView = WKWebView(frame: view.bounds, configuration: config)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -52,19 +59,42 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         cloud.webView = webView
         adsBridge.webView = webView
         adsBridge.presenter = self
+        store.webView = webView
 
         webView.load(URLRequest(url: URL(string: "\(Self.scheme)://\(Self.host)/index.html")!))
 
-        GameView.pendingDeepLink.sink { [weak self] url in self?.handle(deepLink: url) }.store(in: &links)
+        GameView.pendingDeepLink.sink { [weak self] url in if let url = url { self?.handle(deepLink: url) } }.store(in: &links)
     }
 
-    /// gamebox://play/skip → opens that game; gamebox://skip/#c=… → challenge link.
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        pageReady = true
+        if let url = pendingLink { pendingLink = nil; handle(deepLink: url) }
+    }
+
+    /// WebKit killed the content process (memory pressure): reload instead of showing a dead view.
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        pageReady = false
+        webView.load(URLRequest(url: URL(string: "\(Self.scheme)://\(Self.host)/index.html")!))
+    }
+
+    /// Accepted forms (any host, custom scheme or https universal link):
+    ///   gamebox://play/skip            → #play=skip
+    ///   …/#play=skip&c=SEED.SCORE.TAG  → forwarded as-is
+    ///   gamebox://skip/#c=…            → #play=skip&c=…
     private func handle(deepLink url: URL) {
+        guard pageReady else { pendingLink = url; return }
         var hash = ""
         if url.host == "play", let id = url.pathComponents.dropFirst().first { hash = "#play=\(id)" }
-        else if let frag = url.fragment, let game = url.host { hash = "#play=\(game)&\(frag)" }
-        guard !hash.isEmpty else { return }
-        webView.evaluateJavaScript("location.hash = '\(hash)';", completionHandler: nil)
+        else if let frag = url.fragment, !frag.isEmpty {
+            if frag.hasPrefix("play=") { hash = "#\(frag)" }
+            else if let game = url.host, game != Self.host, game != "nickburum.github.io" { hash = "#play=\(game)&\(frag)" }
+            else { hash = "#\(frag)" }
+        }
+        // only the characters a challenge fragment can contain
+        hash = hash.filter { $0.isLetter || $0.isNumber || "#=&.-_".contains($0) }
+        guard hash.count > 1, let data = try? JSONSerialization.data(withJSONObject: [hash]), let json = String(data: data, encoding: .utf8) else { return }
+        // JSON-encoded, so no character in the link can break out of the string
+        webView.evaluateJavaScript("location.hash = \(json)[0];", completionHandler: nil)
     }
 
     override var prefersHomeIndicatorAutoHidden: Bool { true }

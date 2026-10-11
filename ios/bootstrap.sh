@@ -19,6 +19,11 @@ cp ../art/icon-1024.png "$ICON_DIR/icon-1024.png"
 cat > "$ICON_DIR/Contents.json" <<'JSON'
 { "images": [ { "filename": "icon-1024.png", "idiom": "universal", "platform": "ios", "size": "1024x1024" } ], "info": { "author": "xcode", "version": 1 } }
 JSON
+# Launch-screen colour (#0B1020, the hub's night) so the first frame is never a white flash.
+LB="GameBox/Assets.xcassets/LaunchBackground.colorset"; mkdir -p "$LB"
+cat > "$LB/Contents.json" <<'JSON'
+{ "colors" : [ { "color" : { "color-space" : "srgb", "components" : { "alpha" : "1.000", "blue" : "0x20", "green" : "0x10", "red" : "0x0B" } }, "idiom" : "universal" } ], "info" : { "author" : "xcode", "version" : 1 } }
+JSON
 cat > "GameBox/Assets.xcassets/Contents.json" <<'JSON'
 { "info": { "author": "xcode", "version": 1 } }
 JSON

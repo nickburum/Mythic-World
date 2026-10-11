@@ -50,7 +50,7 @@ body[data-view="game"] .home { display: none; }
 .player { position: fixed; inset: 0; z-index: 5; background: #000; }
 .player[hidden] { display: none; }
 .frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
-.back-pill { position: absolute; top: calc(var(--safe-top) + 10px); left: 50%; transform: translateX(-50%); z-index: 7; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: rgba(8,12,24,.6); color: #fff; font-weight: 800; font-size: 11px; letter-spacing: .24em; text-transform: uppercase; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: opacity .3s; }
+.back-pill { position: absolute; top: calc(var(--safe-top) + 10px); left: 50%; transform: translateX(-50%); z-index: 7; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: rgba(8,12,24,.78); color: #fff; font-weight: 800; font-size: 11px; letter-spacing: .24em; text-transform: uppercase; cursor: pointer; transition: opacity .3s; }
 .back-pill svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .back-pill:active { transform: translateX(-50%) scale(.96); }
 .player.quiet .back-pill { opacity: .35; }
@@ -93,3 +93,5 @@ body[data-view="game"] .home { display: none; }
 .link-sheet .label { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-2); }
 .link-sheet .tut-text { margin: 0; font-size: 14px; color: var(--ink-2); }
 .link-input { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); background: rgba(0,0,0,.3); color: var(--ink); font: inherit; font-size: 13px; text-align: center; -webkit-user-select: text; user-select: text; }
+
+.btn.danger.armed { background: var(--danger, #ff5a6e); color: #fff; border-color: transparent; }
