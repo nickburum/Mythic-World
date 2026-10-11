@@ -1,14 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <defs><radialGradient id="bg" cx=".5" cy=".5" r=".75"><stop offset="0" stop-color="hsl(232 45% 20%)"/><stop offset="1" stop-color="#05070f"/></radialGradient>
-  <radialGradient id="star" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="rgba(185,140,255,.6)"/><stop offset="1" stop-color="rgba(185,140,255,0)"/></radialGradient>
-  <radialGradient id="comet" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="rgba(125,240,255,.7)"/><stop offset="1" stop-color="rgba(125,240,255,0)"/></radialGradient></defs>
+  <!-- ORBIT icon: a thick glowing ring, the comet (with its face) racing round, one red wall, one gem. Style guide: docs/review/artist1.md -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d2b52"/><stop offset="1" stop-color="#0b1020"/></linearGradient>
+    <radialGradient id="glow" cx="512" cy="512" r="420" gradientUnits="userSpaceOnUse"><stop offset=".55" stop-color="#7df0ff" stop-opacity="0"/><stop offset=".75" stop-color="#7df0ff" stop-opacity=".18"/><stop offset="1" stop-color="#7df0ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="head" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#7df0ff" stop-opacity=".7"/><stop offset="1" stop-color="#7df0ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="star" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#b98cff" stop-opacity=".55"/><stop offset="1" stop-color="#b98cff" stop-opacity="0"/></radialGradient>
+  </defs>
   <rect width="1024" height="1024" fill="url(#bg)"/>
-  <circle cx="512" cy="512" r="110" fill="url(#star)"/>
-  <circle cx="512" cy="512" r="330" fill="none" stroke="rgba(125,240,255,.25)" stroke-width="22"/>
-  <circle cx="512" cy="512" r="330" fill="none" stroke="rgba(125,240,255,.8)" stroke-width="5"/>
-  <path d="M 827.2610414114499 609.5216681982421 A 330 330 0 0 1 661.6867200704405 806.0984288202737" fill="none" stroke="#ff5a6e" stroke-width="54" stroke-linecap="round"/>
-  <path d="M 229.2267113882474 341.8845472989168 A 330 330 0 0 0 568.0891571570795 186.80158910380817" fill="none" stroke="rgba(125,240,255,.55)" stroke-width="40" stroke-linecap="round"/>
-  <circle cx="568.0891571570795" cy="186.80158910380817" r="95" fill="url(#comet)"/>
-  <circle cx="568.0891571570795" cy="186.80158910380817" r="30" fill="#fff"/>
-  <g transform="translate(317.7946313057359 778.8038132604647) rotate(20)"><path d="M0 -42 L30 0 L0 42 L-30 0 Z" fill="#ffe66b"/><path d="M0 -20 L14 0 L0 20 L-14 0 Z" fill="#fff8d0"/></g>
+  <circle cx="512" cy="512" r="420" fill="url(#glow)"/>
+  <circle cx="512" cy="512" r="96" fill="url(#star)"/>
+  <!-- ring: halo + body -->
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#7df0ff" stroke-opacity=".3" stroke-width="80"/>
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#9ff5ff" stroke-width="44"/>
+  <!-- red wall (arc, lower right) -->
+  <path d="M 724 724 A 300 300 0 0 1 512 812" fill="none" stroke="#ff5a6e" stroke-width="72" stroke-linecap="round"/>
+  <!-- gem (left) -->
+  <path d="M212 467 L257 512 L212 557 L167 512 Z" fill="#ffe66b"/>
+  <!-- comet trail + head with eyes (top right) -->
+  <path d="M 512 212 A 300 300 0 0 1 724 300" fill="none" stroke="#7df0ff" stroke-width="40" stroke-linecap="round" stroke-opacity=".55"/>
+  <circle cx="724" cy="300" r="120" fill="url(#head)"/>
+  <circle cx="724" cy="300" r="66" fill="#fff"/>
+  <circle cx="742" cy="282" r="13" fill="#1b2a44"/><circle cx="710" cy="268" r="13" fill="#1b2a44"/>
 </svg>
