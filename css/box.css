@@ -1,6 +1,6 @@
 /* Game Box — launcher. Symmetry, clean lines, minimal. */
 :root {
-  --bg: #0b1020; --ink: #fff; --ink-2: rgba(255,255,255,.62); --ink-3: rgba(255,255,255,.38);
+  --bg: #0b1020; --ink: #fff; --ink-2: rgba(255,255,255,.62); --ink-3: rgba(255,255,255,.55);
   --line: rgba(255,255,255,.16); --line-2: rgba(255,255,255,.3); --surface: rgba(255,255,255,.05);
   --r: 14px; --r-lg: 22px;
   --font: ui-rounded, -apple-system, "SF Pro Rounded", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -24,7 +24,7 @@ body[data-view="game"] .home { display: none; }
 .icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .icon-btn:active { transform: scale(.94); background: rgba(255,255,255,.08); }
 
-.section-title { margin: 0 0 10px; text-align: center; font-size: 10px; letter-spacing: .34em; color: var(--ink-3); text-transform: uppercase; }
+.section-title { margin: 0 0 10px; text-align: center; font-size: 11px; letter-spacing: .34em; color: var(--ink-3); text-transform: uppercase; }
 .hero-card { display: grid; grid-template-columns: 72px 1fr 72px; align-items: center; width: 100%; padding: 16px; border: 1px solid var(--line-2); border-radius: var(--r-lg); background: var(--surface); cursor: pointer; transition: transform .1s; }
 .hero-card:active { transform: scale(.985); background: rgba(255,255,255,.09); }
 .hero-icon { width: 72px; height: 72px; border-radius: 18px; }

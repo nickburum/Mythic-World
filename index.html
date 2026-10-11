@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Game Box</title>
   <meta name="description" content="Five tiny games in one box. Pick one and play." />
   <meta name="theme-color" content="#0f1628" />
@@ -71,7 +71,7 @@
   </section>
 
   <!-- ─── Settings sheet ─── -->
-  <section id="settings" class="sheet-wrap" hidden>
+  <section id="settings" class="sheet-wrap" role="dialog" aria-modal="true" aria-label="Settings" hidden>
     <div class="scrim" data-close></div>
     <div class="sheet">
       <div class="grabber"></div>
@@ -94,7 +94,7 @@
     </div>
   </section>
 
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script type="module" src="src/box.js"></script>
 </body>
 </html>

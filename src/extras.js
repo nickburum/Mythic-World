@@ -126,14 +126,14 @@ export function attachExtras(o) {
   function showTutorial(done, mark = true) {
     if (document.querySelector('.tutorial')) return;
     let i = 0;
-    const wrap = el(`<section class="overlay menu tutorial" data-ui><div class="panel"><div class="tut-dots"></div><div class="tut-art"></div><b class="tut-title"></b><p class="tut-text"></p><button class="btn primary big" type="button">Next</button><button class="btn skip-tut" type="button">Skip</button></div></section>`);
+    const wrap = el(`<section class="overlay menu tutorial" data-ui role="dialog" aria-modal="true" aria-labelledby="tut-title-${o.id}"><div class="panel"><div class="tut-dots" aria-hidden="true"></div><div class="tut-art" aria-hidden="true"></div><b class="tut-title" id="tut-title-${o.id}"></b><p class="tut-text"></p><button class="btn primary big" type="button">Next</button><button class="btn skip-tut" type="button">Skip</button></div></section>`);
     document.body.appendChild(wrap);
     const dots = wrap.querySelector('.tut-dots'), art = wrap.querySelector('.tut-art'), t = wrap.querySelector('.tut-title'), p = wrap.querySelector('.tut-text'), next = wrap.querySelector('.btn.primary');
     const render = () => { const s = o.steps[i]; dots.innerHTML = o.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join(''); art.innerHTML = s.art || ''; t.textContent = s.title; p.textContent = s.text; next.textContent = i === o.steps.length - 1 ? 'Play' : 'Next'; };
     const finish = () => { if (mark) { const all = LS.get('gamebox.tutorials', {}) || {}; all[o.id] = true; LS.set('gamebox.tutorials', all); } wrap.remove(); done(); };
     next.addEventListener('click', () => { if (i < o.steps.length - 1) { i++; render(); } else finish(); });
     wrap.querySelector('.skip-tut').addEventListener('click', finish);
-    render();
+    render(); next.focus({ preventScroll: true });
   }
   /** Start straight away: first-run teaching happens in the run (coach marks), never as a slideshow. */
   function beforeStart(cb) { if (!seen()) { const all = LS.get('gamebox.tutorials', {}) || {}; all[o.id] = true; LS.set('gamebox.tutorials', all); } cb(); }
@@ -155,7 +155,7 @@ export function attachExtras(o) {
   }
 
   /* ─── toast ─── */
-  function toast(text) { let t = document.getElementById('toast'); if (!t) { t = el(`<div id="toast" class="toast" hidden></div>`); document.body.appendChild(t); } t.textContent = text; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => { t.hidden = true; }, 2200); }
+  function toast(text) { let t = document.getElementById('toast'); if (!t) { t = el(`<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>`); document.body.appendChild(t); } t.textContent = text; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => { t.hidden = true; }, 2200); }
 
   /* ─── lifecycle hooks the game calls ─── */
   const api = {
@@ -180,6 +180,8 @@ export function attachExtras(o) {
     currentSeed() { return state.challenge ? state.challenge.seed : state.daily && state.daily.active ? state.daily.seed : undefined; },
     newSeed,
   };
+  const mute = document.getElementById('mute');
+  if (mute) { const sync = () => { const m = mute.classList.contains('muted'); mute.setAttribute('aria-pressed', String(m)); mute.setAttribute('aria-label', m ? 'Sound off' : 'Sound on'); }; sync(); new MutationObserver(sync).observe(mute, { attributes: true, attributeFilter: ['class'] }); }
   // box-wide sound setting is stored per game as <id>.muted; respect it at attach time
   readIncoming();
   return api;

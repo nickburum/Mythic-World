@@ -23,7 +23,7 @@ export async function shareHere({ title, text, url }, { toast } = {}) {
 export function linkSheet({ title, text, url, toast }) {
   document.querySelector('.link-sheet')?.remove();
   const wrap = document.createElement('section');
-  wrap.className = 'overlay menu link-sheet'; wrap.setAttribute('data-ui', '');
+  wrap.className = 'overlay menu link-sheet'; wrap.setAttribute('data-ui', ''); wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', title || 'Share link');
   wrap.innerHTML = `<div class="panel"><div class="label">${title || 'Share'}</div><p class="tut-text">${text || ''}</p><input class="link-input" type="text" readonly value="${url}" /><button class="btn primary big" type="button">Copy link</button><button class="btn" type="button">Done</button></div>`;
   document.body.appendChild(wrap);
   const input = wrap.querySelector('input'), [copy, done] = wrap.querySelectorAll('button');

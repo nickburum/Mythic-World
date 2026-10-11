@@ -203,7 +203,7 @@ class App {
   onMiss(r) {
     this.sfx.miss();
     haptics.heavy();
-    this.fx.addShake(14);
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) this.fx.addShake(14);
     this.fx.addFallingPiece(r.block, r.axis, Math.sign(r.delta) || 1, this.seedHue);
     this.setState(STATE.FALLING);
     this.updateCameraTarget();

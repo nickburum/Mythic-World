@@ -94,7 +94,7 @@ class Box {
     this.ui.heroBtn.addEventListener('click', () => { vibrate(8); this.open(this.ui.heroBtn.dataset.id); });
     $('today-play').addEventListener('click', () => { vibrate(8); this.open(this.dailyGame, `#d=${this.dailyDate}`); });
     this.ui.back.addEventListener('click', () => { vibrate(8); this.close(); });
-    $('open-settings').addEventListener('click', () => { vibrate(8); this.ui.settings.hidden = false; });
+    $('open-settings').addEventListener('click', () => { vibrate(8); this.ui.settings.hidden = false; this.ui.settings.querySelector('.btn[data-close]')?.focus({ preventScroll: true }); });
     this.ui.soundBtn.addEventListener('click', () => { this.ui.optSound.checked = !this.ui.optSound.checked; this.ui.optSound.dispatchEvent(new Event('change')); });
     for (const el of document.querySelectorAll('[data-close]')) el.addEventListener('click', () => { this.ui.settings.hidden = true; });
     const save = () => { this.settings = { sound: this.ui.optSound.checked, haptics: this.ui.optHaptics.checked, quality: this.ui.optQuality.value }; LS.set('gamebox.settings', this.settings); haptics.setEnabled(this.settings.haptics); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); this.syncSound(); vibrate(6); };
@@ -180,7 +180,7 @@ class Box {
   /** The iOS shell calls this when the app resigns active (Control Center, a call): pause the run. */
   pauseGame() { try { this.ui.frame.contentWindow.postMessage({ type: 'gamebox:pause' }, '*'); } catch {} }
 
-  syncSound() { const on = this.ui.optSound.checked; this.ui.soundOn.hidden = !on; this.ui.soundOff.hidden = on; }
+  syncSound() { const on = this.ui.optSound.checked; this.ui.soundOn.hidden = !on; this.ui.soundOff.hidden = on; this.ui.soundBtn.setAttribute('aria-pressed', String(!on)); this.ui.soundBtn.setAttribute('aria-label', on ? 'Sound on' : 'Sound off'); }
 
   /** Native callbacks land in this (main) frame; forward them to the running game, and own Game Center for the box. */
   setupNative() {

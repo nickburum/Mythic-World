@@ -6,7 +6,7 @@
  * sheet on phones, buttons are ≥56px, safe areas everywhere.
  */
 :root {
-  --ink: #fff; --ink-2: rgba(255,255,255,.64); --ink-3: rgba(255,255,255,.4);
+  --ink: #fff; --ink-2: rgba(255,255,255,.64); --ink-3: rgba(255,255,255,.55);
   --line: rgba(255,255,255,.18); --line-2: rgba(255,255,255,.3);
   --surface: rgba(10,14,28,.62); --accent: #fff;
   --r: 14px; --r-lg: 22px;
