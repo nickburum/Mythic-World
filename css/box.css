@@ -30,7 +30,7 @@ body[data-view="game"] .home { display: none; }
 .hero-icon { width: 72px; height: 72px; border-radius: 18px; }
 .hero-text { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .hero-text small { font-size: 10px; letter-spacing: .3em; color: var(--ink-3); text-transform: uppercase; }
-.hero-text b { font-size: 22px; font-weight: 900; letter-spacing: .1em; }
+.hero-text > b { font-size: 22px; font-weight: 900; letter-spacing: .1em; }
 .hero-text .tagline { margin: 0; font-size: 12px; color: var(--ink-2); max-width: 200px; }
 .hero-play { justify-self: end; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--ink); display: grid; place-items: center; }
 .hero-play svg { width: 16px; height: 16px; fill: var(--ink); }
@@ -103,3 +103,20 @@ body[data-view="game"] .home { display: none; }
 .iap[hidden] { display: none; }
 .iap .note { margin: 0; }
 .tag-input { width: 84px; height: 40px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(255,255,255,.06); color: inherit; font: inherit; font-weight: 800; letter-spacing: .3em; text-align: center; text-transform: uppercase; }
+
+/* ─── hub ↔ game motion ─── */
+.player:not([hidden]) { animation: player-in .32s cubic-bezier(.2,.9,.2,1); }
+.player.closing { animation: player-out .24s ease-in forwards; pointer-events: none; }
+@keyframes player-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes player-out { to { transform: translateY(100%); } }
+body[data-view="game"] .bg { transform: scale(.96); opacity: .7; transition: transform .32s, opacity .32s; }
+.loading { background: radial-gradient(60% 40% at 50% 50%, color-mix(in srgb, var(--accent, #3aa7ff) 28%, transparent), var(--bg) 70%); }
+.load-icon { width: 64px; height: 64px; border-radius: 16px; animation: load-pulse .9s ease-in-out infinite alternate; box-shadow: 0 10px 40px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.14); }
+@keyframes load-pulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+#frame { transition: opacity .2s; }
+/* every game in a fixed order; a fifth card sits centred under the pairs */
+.grid .card:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: calc(50% - 6px); }
+.chip.new { color: var(--accent, #fff); border-color: color-mix(in srgb, var(--accent, #fff) 50%, transparent); font-weight: 800; letter-spacing: .24em; text-transform: uppercase; }
+.card img, .hero-icon { box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.card { border-top: 3px solid color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+@media (prefers-reduced-motion: reduce) { .player:not([hidden]), .player.closing, .load-icon { animation: none; } .player.closing { opacity: 0; } }

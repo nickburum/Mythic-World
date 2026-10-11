@@ -45,8 +45,8 @@ async function renderScreens(browser) {
   await shot(page, 'share-sheet');
   await page.evaluate(() => document.querySelector('.link-sheet')?.remove());
   await page.click('#back'); await page.waitForTimeout(300);
-  const home = await page.evaluate(() => document.body.dataset.view === 'home' && document.getElementById('hero-name').textContent === 'SKIP' && document.querySelectorAll('#grid .card').length === 4);
-  if (!home) errors.push('back did not return home with SKIP as the hero and four cards');
+  const home = await page.evaluate(() => document.body.dataset.view === 'home' && document.getElementById('hero-name').textContent === 'SKIP' && document.querySelectorAll('#grid .card').length === 5);
+  if (!home) errors.push('back did not return home with SKIP as the hero and all five cards');
   await shot(page, 'home-hero');
   await page.click('#open-settings'); await page.waitForTimeout(400); await shot(page, 'settings');
   const hasReplay = await page.evaluate(() => !!document.getElementById('replay-tutorials'));

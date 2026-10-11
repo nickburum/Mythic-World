@@ -13,6 +13,9 @@ const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 const vibrate = (ms) => haptics.pulse(ms);
 
+/** A game's best as a chip: "best 42", or "New" before the first score. */
+const chip = (g, id = '') => { const v = readBest(g, k => localStorage.getItem(k)); return v ? `<span class="chip"${id ? ` id="${id}"` : ''} data-best="${g.id}">best<b>${formatBest(g, v)}</b></span>` : `<span class="chip new"${id ? ` id="${id}"` : ''} data-best="${g.id}">New</span>`; };
+
 class Box {
   constructor() {
     this.settings = LS.get('gamebox.settings', { sound: true, haptics: true, quality: 'auto' });
@@ -20,7 +23,7 @@ class Box {
     this.current = null;
     this.ui = { grid: $('grid'), hero: $('hero'), heroBtn: $('hero-btn'), heroIcon: $('hero-icon'), heroName: $('hero-name'), heroBest: $('hero-best'), heroTitle: $('hero-title'), heroTagline: $('hero-tagline'),
       soundBtn: $('toggle-sound'), soundOn: $('sound-on'), soundOff: $('sound-off'),
-      player: $('player'), frame: $('frame'), back: $('back'), backLabel: $('back-label'), loading: $('loading'), settings: $('settings'),
+      player: $('player'), frame: $('frame'), loadIcon: $('load-icon'), home: document.querySelector('.home'), back: $('back'), backLabel: $('back-label'), loading: $('loading'), settings: $('settings'),
       optSound: $('opt-sound'), optHaptics: $('opt-haptics'), optQuality: $('opt-quality'), toast: $('toast') };
     this.ui.optSound.checked = this.settings.sound; this.ui.optHaptics.checked = this.settings.haptics; this.ui.optQuality.value = this.settings.quality;
     this.render();
@@ -37,16 +40,18 @@ class Box {
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.cloud.push(); });
   }
 
+  /** First launch: the simplest game (POP). Afterwards: the last game played. */
   heroGame() { return byId(LS.get('gamebox.last', null)) || GAMES[0]; }
 
   render() {
     const hero = this.heroGame();
-    this.ui.grid.innerHTML = GAMES.filter(g => g.id !== hero.id).map(g => `
-      <button class="card" type="button" data-id="${g.id}" role="listitem" style="--accent:${g.accent}">
+    // the grid never reshuffles: every game, fixed order; the hero above is only a shortcut
+    this.ui.grid.innerHTML = GAMES.map(g => `
+      <button class="card" type="button" data-id="${g.id}" role="listitem" style="--accent:${g.accent}" aria-label="${g.name}: ${g.tagline}">
         <img src="${g.path}art/icon-192.png" alt="" width="64" height="64" />
         <b>${g.name}</b>
         <small>${g.tagline}</small>
-        <div class="meta"><span class="chip" data-best="${g.id}">best<b>${formatBest(g, readBest(g, k => localStorage.getItem(k)))}</b></span></div>
+        <div class="meta">${chip(g)}</div>
       </button>`).join('');
     this.refreshHero();
   }
@@ -55,12 +60,12 @@ class Box {
 
   refreshHero() {
     const g = this.heroGame();
-    this.ui.heroTitle.textContent = LS.get('gamebox.last', null) ? 'Jump back in' : 'Start here';
+    this.ui.heroTitle.textContent = LS.get('gamebox.last', null) ? 'Jump back in' : 'Play now · 30 seconds';
     this.ui.heroIcon.src = `${g.path}art/icon-192.png`;
     this.ui.heroName.textContent = g.name;
     this.ui.heroTagline.textContent = g.tagline;
-    this.ui.heroBest.innerHTML = `best<b>${formatBest(g, readBest(g, k => localStorage.getItem(k)))}</b>`;
-    this.ui.heroBtn.dataset.id = g.id;
+    this.ui.heroBest.outerHTML = chip(g, 'hero-best'); this.ui.heroBest = $('hero-best');
+    this.ui.heroBtn.dataset.id = g.id; this.ui.heroBtn.style.setProperty('--accent', g.accent);
   }
 
   bind() {
@@ -86,7 +91,7 @@ class Box {
     });
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!this.ui.settings.hidden) this.ui.settings.hidden = true; else if (this.current) this.close(); } });
     window.addEventListener('hashchange', () => { const m = location.hash.match(/play=([a-z-]+)/); if (m && byId(m[1]) && (!this.current || this.current.id !== m[1])) this.open(m[1], location.hash.replace(/^#play=[a-z-]+&?/, '#')); else if (!m && this.current) this.close(false); });
-    this.ui.frame.addEventListener('load', () => { this.ui.loading.classList.add('done'); });
+    this.ui.frame.addEventListener('load', () => { this.ui.loading.classList.add('done'); this.ui.frame.style.opacity = 1; });   // cross-fade the game in
     // games inside the box hand their share requests up here, where the permissions live
     window.addEventListener('message', (e) => { const d = e.data; if (d && d.type === 'gamebox:share') shareHere({ title: d.title, text: d.text, url: d.url }, { toast: (t) => this.toast(t) }); });
     // fade the back pill while playing; any touch near the top brings it back
@@ -100,7 +105,11 @@ class Box {
     this.current = g;
     LS.set('gamebox.last', g.id);
     document.body.dataset.view = 'game';
+    clearTimeout(this.closeT2); this.ui.player.classList.remove('closing');
     this.ui.player.hidden = false;
+    this.ui.player.style.setProperty('--accent', g.accent);
+    this.ui.loadIcon.src = `${g.path}art/icon-192.png`;
+    this.ui.frame.title = g.name; this.ui.frame.style.opacity = 0;
     this.ui.loading.classList.remove('done');
     this.ui.backLabel.textContent = 'Games';
     const test = /[?&]testads=1/.test(location.search) ? '&testads=1' : '';
@@ -116,8 +125,11 @@ class Box {
     try { this.ui.frame.contentWindow.postMessage({ type: 'gamebox:leaving' }, '*'); } catch {}
     const frame = this.ui.frame; clearTimeout(this.closeT);
     this.closeT = setTimeout(() => { if (!this.current) frame.src = 'about:blank'; }, 220);   // let the song fade, then stop the game loop
-    this.ui.player.hidden = true;
+    // slide the game away, then hide it
+    this.ui.player.classList.add('closing'); clearTimeout(this.closeT2);
+    this.closeT2 = setTimeout(() => { if (!this.current) { this.ui.player.hidden = true; this.ui.player.classList.remove('closing'); } }, 240);
     document.body.dataset.view = 'home';
+    this.ui.home && (this.ui.home.scrollTop = 0);
     this.refreshBests();
     this.syncScores();
     if (pop && location.hash.includes('play=')) { if (this.pushed) history.back(); else history.replaceState(null, '', location.pathname + location.search); }

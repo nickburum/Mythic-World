@@ -7,16 +7,16 @@
  * the hub needs no messaging to show them.
  */
 export const GAMES = [
-  { id: 'melt', name: 'MELT', tagline: 'Tap to change state.', path: 'melt/', accent: '#3aa7ff', accent2: '#ff8a5b',
-    best: { key: 'melt.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.melt.score' },
-  { id: 'skip', name: 'SKIP', tagline: 'Tap when the stone kisses the water.', path: 'skip/', accent: '#ffb36b', accent2: '#5b6fd6',
-    best: { key: 'skip.board', kind: 'board', unit: ' m' }, control: 'Tap', leaderboardID: 'com.mythicworld.skip.distance' },
   { id: 'pop', name: 'POP', tagline: 'Pop the bubbles that match.', path: 'pop/', accent: '#ff7ab6', accent2: '#7df0ff',
     best: { key: 'pop.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.pop.score' },
-  { id: 'orbit', name: 'ORBIT', tagline: 'Tap to reverse. Dodge. Collect.', path: 'orbit/', accent: '#7df0ff', accent2: '#b98cff',
-    best: { key: 'orbit.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.orbit.score' },
   { id: 'sky-temple', name: 'SKY TEMPLE', tagline: 'Stack stones to the gods.', path: 'sky-temple/', accent: '#ff9a5b', accent2: '#4ea3ff',
     best: { key: 'skytemple.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.skytemple.score' },
+  { id: 'skip', name: 'SKIP', tagline: 'Tap when the stone kisses the water.', path: 'skip/', accent: '#ffb36b', accent2: '#5b6fd6',
+    best: { key: 'skip.board', kind: 'board', unit: ' m' }, control: 'Tap', leaderboardID: 'com.mythicworld.skip.distance' },
+  { id: 'orbit', name: 'ORBIT', tagline: 'Tap to reverse. Dodge. Collect.', path: 'orbit/', accent: '#7df0ff', accent2: '#b98cff',
+    best: { key: 'orbit.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.orbit.score' },
+  { id: 'melt', name: 'MELT', tagline: 'Tap to change state.', path: 'melt/', accent: '#3aa7ff', accent2: '#ff8a5b',
+    best: { key: 'melt.best', kind: 'int', unit: '' }, control: 'Tap', leaderboardID: 'com.mythicworld.melt.score' },
 ];
 
 export const byId = (id) => GAMES.find(g => g.id === id) || null;
@@ -32,7 +32,7 @@ export function readBest(game, getItem) {
 }
 
 export function formatBest(game, value) {
-  if (!value) return '—';
+  if (!value) return 'New';
   return game.best.kind === 'board' ? `${value.toFixed(1)}${game.best.unit}` : `${Math.round(value)}${game.best.unit}`;
 }
 

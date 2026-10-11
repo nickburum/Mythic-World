@@ -24,7 +24,7 @@ test('best scores read from each game\'s own storage format', () => {
   assert.equal(readBest(byId('skip'), s.getItem), 0);
   assert.equal(formatBest(byId('skip'), 123.4), '123.4 m');
   assert.equal(formatBest(byId('melt'), 42), '42');
-  assert.equal(formatBest(byId('melt'), 0), '—');
+  assert.equal(formatBest(byId('melt'), 0), 'New');
 });
 
 test('box settings fan out to every game in its own encoding', () => {
