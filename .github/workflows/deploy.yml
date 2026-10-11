@@ -1,8 +1,8 @@
-name: Test & Deploy to GitHub Pages
+name: Test, smoke & deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
   pull_request:
   workflow_dispatch:
 
@@ -12,32 +12,69 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
+    name: Unit tests + web build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Core logic tests (MELT + SKIP + Sky Temple)
+      - name: Unit tests (hub, shared modules, all five games)
         run: npm test
+      - name: Shipping web build (hash-stamped service workers)
+        run: bash scripts/build-web.sh dist && cp -r privacy dist/ && test -f dist/index.html && test -f dist/privacy/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+  smoke:
+    name: Browser smoke tests (hub + five games)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright + Chromium
+        run: npm install --no-save playwright@1.48.2 http-server@14.1.1 && npx playwright install --with-deps chromium
+      - name: Smoke every game and the hub
+        run: npm run screens:all
+
+  ios:
+    name: iOS shell compiles (no signing)
+    runs-on: macos-15
+    continue-on-error: true      # signal only: never blocks a web deploy
+    steps:
+      - uses: actions/checkout@v4
+      - name: XcodeGen
+        run: brew install xcodegen
+      - name: Generate project + web bundle
+        env: { GAMEBOX_NO_OPEN: '1' }
+        run: bash ios/bootstrap.sh
+      - name: Build for the simulator
+        run: xcodebuild -project ios/GameBox.xcodeproj -scheme GameBox -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -40
 
   deploy:
-    needs: test
-    if: github.event_name != 'pull_request'
+    needs: [test, smoke]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: dist
       - id: deployment
         uses: actions/deploy-pages@v4

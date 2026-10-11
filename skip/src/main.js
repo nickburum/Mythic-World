@@ -17,6 +17,7 @@ import { Music } from '../../src/music.js';
 import { ads } from '../../src/ads.js';
 import { challengeLink } from '../../src/challenge.js';
 import { shareLink } from '../../src/share.js';
+import { attachPause } from '../../src/pause.js';
 import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -72,9 +73,10 @@ class App {
     this.music = new Music(song); this.music.setMuted(this.muted); this.sfx.onSound = () => this.music.duck();
     window.addEventListener('message', (e) => { if (e.data && e.data.type === 'gamebox:leaving') this.music.stop(0.12); });
     this.setupContinue();
+    this.pauser = attachPause({ onChange: (p) => this.music.setMuted(p || this.muted) });
     window.__skip = this;
     this.startDemo();
-    requestAnimationFrame((t) => this.frame(t));
+    this.rafId = requestAnimationFrame((t) => this.frame(t));
   }
 
   /* ───────────── wiring ───────────── */
@@ -132,9 +134,11 @@ class App {
     else if (avg > 0.028 && this.quality === 'medium') this.setQuality('low');
   }
   onVisibility() {
+    // exactly one loop: cancel whatever frame is still queued before starting again
     this.paused = document.hidden;
     this.last = performance.now();
-    if (!this.paused) requestAnimationFrame((t) => this.frame(t));
+    cancelAnimationFrame(this.rafId);
+    if (!this.paused) this.rafId = requestAnimationFrame((t) => this.frame(t));
   }
 
   /* ───────────── states & screens ───────────── */
@@ -390,7 +394,8 @@ class App {
   /* ───────────── loop ───────────── */
   frame(now) {
     if (this.paused) return;
-    const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
+    let dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
+    if (this.pauser && this.pauser.paused) dt = 0;
     this.last = now; this.time += dt; this.stateTime += dt;
     const g = this.game, r = this.renderer;
 
@@ -422,7 +427,7 @@ class App {
     const S = r.draw(g, this.time, this.fx, this.trail.length ? this.trail : null, { showCharge: this.state === STATE.READY, dt, phaseOverride });
     this.sfx.setNight(S.night);
     this.adapt(dt);
-    requestAnimationFrame((t) => this.frame(t));
+    this.rafId = requestAnimationFrame((t) => this.frame(t));
   }
 }
 

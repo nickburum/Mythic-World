@@ -247,7 +247,8 @@ class App {
   /* ───────────── loop ───────────── */
 
   frame(now) {
-    const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
+    let dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
+    if (this.extras && this.extras.paused) dt = 0;
     this.last = now;
     this.time += dt;
     this.stateTime += dt;

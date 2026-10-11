@@ -33,4 +33,4 @@ echo "✔ GameBox.xcodeproj generated."
 echo "  1. Open it, select the GameBox target ▸ Signing & Capabilities ▸ pick your Team."
 echo "  2. Plug in your iPhone, choose it as the run destination, press ▶."
 echo "  See ios/README.md for TestFlight."
-if command -v open >/dev/null 2>&1; then open GameBox.xcodeproj; fi
+if [ -z "${CI:-}${FASTLANE_LANE_NAME:-}${GAMEBOX_NO_OPEN:-}" ] && command -v open >/dev/null 2>&1; then open GameBox.xcodeproj; fi

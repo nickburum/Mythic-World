@@ -123,7 +123,7 @@ class App {
     if (force || this.lastHud.t !== g.target) { const p = PALETTE[g.target]; this.ui.target.textContent = `${p.glyph} ${p.name}`; this.ui.target.style.color = `hsl(${p.h} 90% 78%)`; this.lastHud.t = g.target; }
   }
   frame(now) {
-    const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); this.last = now; this.time += dt; this.stateTime += dt;
+    let dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); if (this.extras && this.extras.paused) dt = 0; this.last = now; this.time += dt; this.stateTime += dt;
     const g = this.game;
     const frozen = this.hitStop > 0; this.hitStop = Math.max(0, this.hitStop - dt);
     this.vignette = Math.max(0, this.vignette - dt / 0.6); this.flash = Math.max(0, this.flash - dt / 0.15);

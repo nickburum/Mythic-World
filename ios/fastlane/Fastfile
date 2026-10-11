@@ -9,7 +9,8 @@ platform :ios do
   desc "Build and upload a TestFlight build"
   lane :beta do
     api_key = app_store_connect_api_key(key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"], key_filepath: ENV["ASC_KEY_PATH"])
-    sh("bash ../bootstrap.sh")                         # fresh web build + project
+    team = ENV["GAMEBOX_TEAM_ID"] or UI.user_error!("Set GAMEBOX_TEAM_ID to your 10-character Apple Team ID (developer.apple.com ▸ Membership)")
+    sh("GAMEBOX_NO_OPEN=1 bash ../bootstrap.sh --team #{team}")   # fresh web build + project, signed for your team
     increment_build_number(xcodeproj: "GameBox.xcodeproj", build_number: Time.now.strftime("%Y%m%d%H%M"))
     build_app(project: "GameBox.xcodeproj", scheme: "GameBox", export_method: "app-store", xcargs: "-allowProvisioningUpdates")
     upload_to_testflight(api_key: api_key, skip_waiting_for_build_processing: true)

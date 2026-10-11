@@ -49,7 +49,7 @@ Primary **Games ▸ Casual**. Secondary **Games ▸ Arcade**.
 ## Support and marketing URLs
 - Support URL: `https://github.com/nickburum/Mythic-World/issues` (or your own site)
 - Marketing URL: `https://nickburum.github.io/Mythic-World/`
-- Privacy policy URL: host `store/PRIVACY.md` on the Pages site (`https://nickburum.github.io/Mythic-World/store/PRIVACY.html`) — required because AdMob collects identifiers.
+- Privacy policy URL: `https://nickburum.github.io/Mythic-World/privacy/` (generated from `store/PRIVACY.md` by `node tools/privacy-page.mjs`, deployed with the site) — required because AdMob receives device data.
 
 ## Age rating questionnaire
 Everything **None** / **No**. Result: 4+. (No violence, no gambling, no user content, no unrestricted web.)

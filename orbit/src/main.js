@@ -79,7 +79,7 @@ class App {
     setTimeout(() => { this.setState('over'); this.extras.onOver(e.score, { isBest }); }, 700);
   }
   frame(now) {
-    const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); this.last = now; this.time += dt; this.stateTime += dt; const g = this.game;
+    let dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); if (this.extras && this.extras.paused) dt = 0; this.last = now; this.time += dt; this.stateTime += dt; const g = this.game;
     if (this.state === 'play') { if (this.autopilot && this.time - this.lastAuto > 0.25 && autopilot(g)) { g.tap(); this.lastAuto = this.time; } g.update(dt); }
     else if (this.state === 'title') { g.angle = ((g.angle + 1.2 * dt) % TAU + TAU) % TAU; }
     this.trail.push(g.angle); if (this.trail.length > 14) this.trail.shift();

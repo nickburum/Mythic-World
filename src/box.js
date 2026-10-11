@@ -62,7 +62,7 @@ class Box {
   }
 
   bind() {
-    this.ui.grid.addEventListener('click', (e) => { const card = e.target.closest('.card'); if (card) { card.classList.add('pressed'); vibrate(8); setTimeout(() => this.open(card.dataset.id), 120); } });
+    this.ui.grid.addEventListener('click', (e) => { const card = e.target.closest('.card'); if (!card || this.opening) return; this.opening = true; card.classList.add('pressed'); vibrate(8); setTimeout(() => { this.opening = false; card.classList.remove('pressed'); this.open(card.dataset.id); }, 120); });
     this.ui.heroBtn.addEventListener('click', () => { vibrate(8); this.open(this.ui.heroBtn.dataset.id); });
     this.ui.back.addEventListener('click', () => { vibrate(8); this.close(); });
     $('open-settings').addEventListener('click', () => { vibrate(8); this.ui.settings.hidden = false; });
@@ -75,8 +75,9 @@ class Box {
     // two taps to reset (window.confirm is a silent no-op inside WKWebView); also forgets the iCloud copy
     const reset = $('reset-scores'); let armed = 0;
     reset.addEventListener('click', () => {
-      if (Date.now() - armed > 4000) { armed = Date.now(); reset.textContent = 'Tap again to reset every score'; reset.classList.add('armed'); setTimeout(() => { reset.textContent = 'Reset all scores'; reset.classList.remove('armed'); }, 4000); return; }
-      armed = 0; reset.textContent = 'Reset all scores'; reset.classList.remove('armed');
+      const disarm = () => { armed = 0; clearTimeout(this.resetT); reset.textContent = 'Reset all scores'; reset.classList.remove('armed'); };
+      if (!armed) { armed = Date.now(); reset.textContent = 'Tap again to reset every score'; reset.classList.add('armed'); clearTimeout(this.resetT); this.resetT = setTimeout(disarm, 4000); return; }
+      disarm();
       this.cloud.remove([...SCORE_KEYS, 'gamebox.gcSent']);
       localStorage.removeItem('gamebox.last');
       this.refreshBests(); this.toast('Scores reset');
@@ -93,6 +94,7 @@ class Box {
 
   open(id, extraHash = '') {
     const g = byId(id); if (!g) return;
+    if (this.current && this.current.id === id && !this.ui.player.hidden) return;   // already open (double tap)
     this.current = g;
     LS.set('gamebox.last', g.id);
     document.body.dataset.view = 'game';
@@ -101,7 +103,7 @@ class Box {
     this.ui.backLabel.textContent = 'Games';
     const test = /[?&]testads=1/.test(location.search) ? '&testads=1' : '';
     this.ui.frame.src = `${g.path}index.html?box=1${test}${extraHash && extraHash !== '#' ? extraHash : ''}`;
-    if (!location.hash.includes(`play=${g.id}`)) history.pushState(null, '', `#play=${g.id}`);
+    if (!location.hash.includes(`play=${g.id}`)) { history.pushState({ box: g.id }, '', `#play=${g.id}`); this.pushed = true; } else this.pushed = false;
     this.quiet();
   }
 
@@ -116,8 +118,12 @@ class Box {
     document.body.dataset.view = 'home';
     this.refreshBests();
     this.syncScores();
-    if (pop && location.hash.includes('play=')) history.replaceState(null, '', location.pathname + location.search);
+    if (pop && location.hash.includes('play=')) { if (this.pushed) history.back(); else history.replaceState(null, '', location.pathname + location.search); }
+    this.pushed = false;
   }
+
+  /** The iOS shell calls this when the app resigns active (Control Center, a call): pause the run. */
+  pauseGame() { try { this.ui.frame.contentWindow.postMessage({ type: 'gamebox:pause' }, '*'); } catch {} }
 
   syncSound() { const on = this.ui.optSound.checked; this.ui.soundOn.hidden = !on; this.ui.soundOff.hidden = on; }
 

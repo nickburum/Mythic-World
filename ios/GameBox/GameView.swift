@@ -64,6 +64,10 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         webView.load(URLRequest(url: URL(string: "\(Self.scheme)://\(Self.host)/index.html")!))
 
         GameView.pendingDeepLink.sink { [weak self] url in if let url = url { self?.handle(deepLink: url) } }.store(in: &links)
+        // Control Center, a call banner, the app switcher: the page is not hidden, so tell it to pause the run.
+        NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)
+            .sink { [weak self] _ in self?.webView.evaluateJavaScript("window.__box && window.__box.pauseGame();", completionHandler: nil) }
+            .store(in: &links)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

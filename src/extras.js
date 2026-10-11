@@ -26,6 +26,7 @@ import { Music } from './music.js';
 import { ads } from './ads.js';
 import { newSeed, cleanTag, challengeLink, challengeFromUrl } from './challenge.js';
 import { shareLink } from './share.js';
+import { attachPause } from './pause.js';
 
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 const fmt = (n, unit) => (unit === ' m' ? (Math.round(n * 10) / 10).toFixed(1) : String(Math.round(n))) + unit;
@@ -35,6 +36,7 @@ export function attachExtras(o) {
   const over = document.querySelector(o.over), title = document.querySelector(o.title), retry = document.querySelector(o.retry);
   const panel = over.querySelector('.panel') || over;
   const music = new Music(o.song);
+  const pause = attachPause({ onChange: (p) => { if (music.master && music.ctx) music.master.gain.setTargetAtTime(p || music.muted ? 0 : music.volume, music.ctx.currentTime, 0.05); } });
   if (o.sfx) o.sfx.onSound = () => music.duck();
   // the hub tells us it is about to close the game: fade the song instead of cutting it
   window.addEventListener('message', (e) => { if (e.data && e.data.type === 'gamebox:leaving') music.stop(0.12); });
@@ -143,7 +145,7 @@ export function attachExtras(o) {
 
   /* ─── lifecycle hooks the game calls ─── */
   const api = {
-    music, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share, coach, coachDone,
+    music, pause, get paused() { return pause.paused; }, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share, coach, coachDone,
     unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); } },
     onTitle() { music.setMode('title'); if (coachKey) { coachEl.hidden = true; coachKey = null; } },
     onStart(seed) { state.usedContinue = false; if (seed === undefined) state.challenge = null; cont.hidden = true; versus.hidden = true; music.setMode('play'); },
