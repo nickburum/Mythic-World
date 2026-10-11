@@ -50,6 +50,8 @@ export class SkipGame {
     this.endReason = null;
     this.tapAt = -10;          // time of the last in-window tap
     this.tapLead = null;       // how early that tap was relative to natural contact
+    this.spoiled = false;      // a second tap in the same hop
+    this.lastContact = null;   // the last touchdown, so a late tap can re-judge it
     this.motes = [];
     this.pads = [];
     this.nextMoteX = 9 + this.random() * 5;
@@ -65,7 +67,9 @@ export class SkipGame {
     const c = this.config;
     const ahead = this.stone.x + c.LOOKAHEAD;
     while (this.nextMoteX < ahead) {
-      this.motes.push({ x: this.nextMoteX, taken: false, seed: this.random() });
+      const mx = this.nextMoteX, seed = this.random();
+      // and never a mote on a pad placed earlier (pads can sit right at the edge of the populated lake)
+      if (!this.pads.some(p => Math.abs(p.x - mx) < c.PAD_WIDTH + c.MOTE_RADIUS)) this.motes.push({ x: mx, taken: false, seed });
       this.nextMoteX += c.MOTE_GAP_MIN + this.random() * (c.MOTE_GAP_MAX - c.MOTE_GAP_MIN);
     }
     while (this.nextPadX < ahead) {
@@ -125,13 +129,51 @@ export class SkipGame {
 
   skipTap() {
     const c = this.config;
+    // Late tap: the stone just touched down untapped — judge that skip now, as if the tap had been on time.
+    const lc = this.lastContact;
+    if (lc && !lc.judged && this.time - lc.t <= c.LATE_WINDOW) { this.rejudge(this.time - lc.t); return { accepted: true, lead: -(this.time - lc.t), late: true }; }
     const ttc = this.timeToContact();
     if (ttc > c.EARLY_WINDOW) return { accepted: false, lead: ttc };
+    // one tap per hop: a second tap spoils it (mashing never earns a perfect)
+    if (this.tapLead !== null) { this.spoiled = true; return { accepted: false, lead: ttc, spoiled: true }; }
     this.tapAt = this.time;
     this.tapLead = ttc;
-    // Dip: bring the stone down now so the hop ends here.
-    if (ttc > c.PERFECT_WINDOW && this.stone.y > 0) this.stone.vy = Math.min(this.stone.vy, c.DIP_VY);
+    // Dip: only a clearly early tap brings the stone down now so the hop ends here.
+    if (ttc > c.GOOD_WINDOW && this.stone.y > 0) this.stone.vy = Math.min(this.stone.vy, c.DIP_VY);
     return { accepted: true, lead: ttc };
+  }
+
+  /** Quality of a tap that was `off` seconds from contact (either side). */
+  judge(off) {
+    const c = this.config;
+    if (off <= c.PERFECT_WINDOW) return { quality: 1, kind: 'perfect' };
+    if (off <= c.GOOD_WINDOW) return { quality: 1 - (off - c.PERFECT_WINDOW) / (c.GOOD_WINDOW - c.PERFECT_WINDOW) * 0.5, kind: 'good' };
+    return { quality: clamp(0.5 * (1 - (off - c.GOOD_WINDOW) / (c.EARLY_WINDOW - c.GOOD_WINDOW)), 0, 1), kind: 'early' };
+  }
+
+  /** Apply a skip of the given quality to the stone, from the speed it had before touching the water. */
+  applySkip(vxBefore, quality, kind, moteBoost) {
+    const c = this.config, s = this.stone;
+    if (kind === 'perfect') { this.perfects++; this.streak++; this.bestStreak = Math.max(this.bestStreak, this.streak); }
+    else { if (kind === 'good') this.goods++; this.streak = 0; }
+    const retain = c.RETAIN_BASE + (c.RETAIN_PERFECT - c.RETAIN_BASE) * quality;
+    s.vx = vxBefore * retain;
+    if (kind === 'perfect') s.vx += Math.min(c.PERFECT_BOOST_CAP, c.PERFECT_BOOST * this.streak);
+    s.vx = Math.min(c.VX_MAX ?? Infinity, s.vx + moteBoost);
+    const bounceQ = c.BOUNCE_MIN_QUALITY + (1 - c.BOUNCE_MIN_QUALITY) * quality;
+    s.vy = Math.min(c.BOUNCE_MAX, s.vx * c.BOUNCE_RATIO) * bounceQ;
+  }
+
+  /** A late tap re-judges the skip that just happened (it was scored as untapped). */
+  rejudge(late) {
+    const lc = this.lastContact, s = this.stone, { quality, kind } = this.judge(late);
+    lc.judged = true;
+    if (kind === 'early') return;                 // not worth anything: leave the plain skip
+    this.streak = lc.streakBefore;
+    this.applySkip(lc.vxBefore, quality, kind, lc.moteBoost);
+    s.vy -= this.config.GRAVITY * late;           // the stone has been rising for `late` seconds already
+    this.lastSkip = { x: lc.x, quality, kind, speed: s.vx, streak: this.streak, late: true };
+    this.emit('skip', this.lastSkip);
   }
 
   /* ───────────── simulation ───────────── */
@@ -180,34 +222,24 @@ export class SkipGame {
       return;
     }
 
-    // skip quality from the tap timing
+    // skip quality from the tap timing (a spoiled hop — two taps — counts as untapped)
     const sinceTap = this.time - this.tapAt;
     let quality = 0, kind = 'plain';
-    if (sinceTap <= c.EARLY_WINDOW + 0.05 && this.tapLead !== null) {
-      const lead = this.tapLead;
-      if (lead <= c.PERFECT_WINDOW) { quality = 1; kind = 'perfect'; }
-      else if (lead <= c.GOOD_WINDOW) { quality = 1 - (lead - c.PERFECT_WINDOW) / (c.GOOD_WINDOW - c.PERFECT_WINDOW) * 0.5; kind = 'good'; }
-      else { quality = 0.5 * (1 - (lead - c.GOOD_WINDOW) / (c.EARLY_WINDOW - c.GOOD_WINDOW)); kind = 'early'; }
-    }
-    quality = clamp(quality, 0, 1);
-    this.tapAt = -10; this.tapLead = null;
-
-    if (kind === 'perfect') { this.perfects++; this.streak++; this.bestStreak = Math.max(this.bestStreak, this.streak); }
-    else { if (kind === 'good') this.goods++; this.streak = 0; }
-
-    const retain = c.RETAIN_BASE + (c.RETAIN_PERFECT - c.RETAIN_BASE) * quality;
-    s.vx *= retain;
-    if (kind === 'perfect') s.vx += Math.min(c.PERFECT_BOOST_CAP, c.PERFECT_BOOST * this.streak);
+    const tapped = sinceTap <= c.EARLY_WINDOW + 0.05 && this.tapLead !== null && !this.spoiled;
+    const anyTap = this.tapLead !== null || this.spoiled;     // a hop that was tapped at all can't be re-judged late
+    if (tapped) ({ quality, kind } = this.judge(this.tapLead));
+    this.tapAt = -10; this.tapLead = null; this.spoiled = false;
 
     // mote?
     let mote = null;
     for (const m of this.motes) {
       if (!m.taken && Math.abs(m.x - s.x) <= c.MOTE_RADIUS) { m.taken = true; mote = m; break; }
     }
-    if (mote) { this.motesCollected++; s.vx += c.MOTE_BOOST; this.emit('mote', { mote, x: s.x }); }
+    if (mote) { this.motesCollected++; this.emit('mote', { mote, x: s.x }); }
+    const moteBoost = mote ? c.MOTE_BOOST : 0;
 
-    const bounceQ = c.BOUNCE_MIN_QUALITY + (1 - c.BOUNCE_MIN_QUALITY) * quality;
-    s.vy = Math.min(c.BOUNCE_MAX, s.vx * c.BOUNCE_RATIO) * bounceQ;
+    this.lastContact = { t: this.time, x: s.x, vxBefore: s.vx, streakBefore: this.streak, moteBoost, judged: anyTap };
+    this.applySkip(s.vx, quality, kind, moteBoost);
     s.y = 0.001;
     this.skips++;
     this.lastSkip = { x: s.x, quality, kind, speed: s.vx, streak: this.streak };
@@ -220,7 +252,7 @@ export class SkipGame {
     const c = this.config, s = this.stone;
     this.pads = this.pads.filter(p => p.x > s.x + 28);
     s.vx = c.THROW_VX_MIN + (c.THROW_VX_MAX - c.THROW_VX_MIN) * 0.5; s.vy = c.THROW_VY; s.y = c.HAND_HEIGHT * 0.5;
-    this.phase = 'flight'; this.endReason = null; this.tapAt = -10; this.tapLead = null;
+    this.phase = 'flight'; this.endReason = null; this.tapAt = -10; this.tapLead = null; this.spoiled = false; this.lastContact = null;
     this.emit('revive', this);
     return true;
   }
@@ -254,10 +286,11 @@ export class SkipGame {
 export function autopilot(game) {
   if (game.phase !== 'flight') return false;
   const c = game.config;
+  if (game.tapLead !== null) return false;    // one tap per hop
   const ttc = game.timeToContact();
   if (ttc > c.EARLY_WINDOW) return false;
   const landing = game.predictedLandingX();
   const onPad = game.pads.some(p => Math.abs(p.x - landing) <= p.w / 2 + 0.3);
-  if (onPad) return true;                     // dip now, land short of the pad
+  if (onPad) return ttc > c.GOOD_WINDOW;      // dip now (a clearly early tap), land short of the pad
   return ttc <= c.PERFECT_WINDOW * 0.5;       // otherwise wait for the perfect moment
 }

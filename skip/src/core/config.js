@@ -13,17 +13,19 @@ export const CONFIG = Object.freeze({
 
   /* skipping */
   EARLY_WINDOW: 0.45,       // tapping this long before natural contact dips the stone (shorter hop)
-  PERFECT_WINDOW: 0.11,     // tap within this of contact = perfect
-  GOOD_WINDOW: 0.24,        // … = good
-  RETAIN_BASE: 0.86,        // speed kept on an untapped / poor skip
+  PERFECT_WINDOW: 0.14,     // tap within this of contact (before or after) = perfect
+  GOOD_WINDOW: 0.28,        // … = good
+  LATE_WINDOW: 0.12,        // a tap this soon AFTER contact still counts (humans react, they don't predict)
+  RETAIN_BASE: 0.90,        // speed kept on an untapped / poor skip
   RETAIN_PERFECT: 0.97,     // speed kept on a perfect skip
   BOUNCE_RATIO: 0.30,       // vy after a skip = vx × ratio × bounce quality
   BOUNCE_MAX: 4.2,
-  BOUNCE_MIN_QUALITY: 0.70, // weakest hop, as a fraction of a perfect one
+  BOUNCE_MIN_QUALITY: 0.85, // weakest hop, as a fraction of a perfect one
   DIP_VY: -7,               // downward kick when the player taps early
   MIN_SPEED: 2.6,           // below this the stone sinks on its next contact
   PERFECT_BOOST: 0.35,      // extra m/s per perfect in a streak (capped)
-  PERFECT_BOOST_CAP: 2.0,
+  PERFECT_BOOST_CAP: 1.2,
+  VX_MAX: 26,               // speed ceiling, so a perfect streak stays readable and scores stay comparable
 
   /* pickups & hazards */
   MOTE_RADIUS: 0.7,         // landing within this of a mote collects it

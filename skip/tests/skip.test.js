@@ -19,7 +19,7 @@ function play(g, charge, policy, maxT = 120) {
   return g;
 }
 const never = () => false;
-const perfect = (g) => g.timeToContact() <= CONFIG.PERFECT_WINDOW * 0.5;
+const perfect = (g) => g.tapLead === null && g.timeToContact() <= CONFIG.PERFECT_WINDOW * 0.5;   // one tap per hop
 
 test('wind-up charges while holding and throws on release', () => {
   const g = new SkipGame({ random: rng(1) });
@@ -255,4 +255,55 @@ test('revive puts a sunk stone back in flight at the same distance', () => {
   for (let t = 0; t < 2; t += DT) g.update(DT);
   assert.ok(g.distance > d + 5, 'keeps skipping after the revive');
   assert.equal(g.revive(), false);
+});
+
+/** A human: reacts to the touchdown, so taps land around contact with N(mu, sigma) seconds of error. */
+function human(seed, mu, sigma) {
+  const r = rng(seed); const gauss = () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  let planned = null, hopId = -1;
+  return (g) => {
+    // a new hop: plan the next tap — unless this hop's tap is still pending (a late tap fires after touchdown)
+    if (g.skips !== hopId && !(Number.isFinite(planned) && planned !== null)) { hopId = g.skips; planned = null; }
+    if (planned === null) { const ttc = g.timeToContact(); if (ttc < 2) planned = g.time + ttc + mu + sigma * gauss(); }
+    if (planned !== null && g.time >= planned) { planned = Infinity; return true; }
+    return false;
+  };
+}
+function median(a) { const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; }
+function runHuman(mu, sigma, seeds = 40, config = {}) {
+  const out = [];
+  for (let s = 0; s < seeds; s++) {
+    const g = new SkipGame({ random: rng(100 + s), config }); const pol = human(500 + s, mu, sigma);
+    g.throwStone(0.6); let t = 0;
+    while (g.phase === 'flight' && t < 120) { if (pol(g)) g.tap(); g.update(DT); t += DT; }
+    out.push(g.distance);
+  }
+  return median(out);
+}
+test('a tap just after touchdown is judged like an on-time tap (late window)', () => {
+  const g = new SkipGame({ random: rng(3) });
+  g.throwStone(0.6);
+  let kinds = [];
+  g.on('skip', (k) => kinds.push(k.kind));
+  // fly to the first touchdown without tapping, then tap 50 ms later
+  while (g.skips === 0) g.update(DT);
+  for (let t = 0; t < 0.05; t += DT) g.update(DT);
+  const res = g.tap();
+  assert.ok(res && (res.late || res.accepted), 'late tap accepted');
+  assert.equal(kinds.at(-1), 'perfect');
+});
+test('mashing (a tap every 50 ms) earns at most one lucky perfect', () => {
+  const g = new SkipGame({ random: rng(4) }); g.throwStone(0.6);
+  let perfects = 0; g.on('skip', (k) => { if (k.kind === 'perfect') perfects++; });
+  let t = 0, next = 0;
+  while (g.phase === 'flight' && t < 30) { if (t >= next) { g.tap(); next = t + 0.05; } g.update(DT); t += DT; }
+  assert.ok(perfects <= 1, `${perfects} perfects`);   // only a hop shorter than the tap interval can be hit by luck
+});
+test('humans are rewarded: σ 40 ms reaction taps reach a median of 75 m+ (pads end most runs), and beat not tapping', () => {
+  const tapping = runHuman(0.03, 0.04), never = runHuman(99, 0);
+  assert.ok(tapping >= 75, `median ${tapping.toFixed(1)} m`);
+  // timing skill alone (no pads): tapping like a human must clearly beat not tapping
+  const open = { PAD_START: 1e9 }, tapOpen = runHuman(0.03, 0.04, 40, open), neverOpen = runHuman(99, 0, 40, open);
+  assert.ok(tapOpen > neverOpen * 1.5, `open lake: tapping ${tapOpen.toFixed(1)} vs never ${neverOpen.toFixed(1)}`);
+  assert.ok(tapping > never, `with pads: tapping ${tapping.toFixed(1)} vs never ${never.toFixed(1)}`);
 });

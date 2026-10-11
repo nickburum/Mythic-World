@@ -16,7 +16,9 @@ test('blockers warn before they are solid and only kill when solid', () => {
   const g = new OrbitGame({ seed: 2 });
   g.blocks = [{ id: 1, angle: g.angle, half: 0.4, age: 0, state: 'warn' }]; g.blockIn = 99; g.gemIn = 99;
   g.update(DT); assert.ok(!g.over, 'warning blocker is harmless');
-  g.blocks[0].age = CONFIG.BLOCK_WARN; g.update(DT); assert.ok(g.over, 'solid blocker on the comet ends the run');
+  g.blocks[0].age = CONFIG.BLOCK_WARN; g.update(DT); assert.ok(!g.over, 'a warning never closes on the comet: it holds open');
+  assert.equal(g.blocks[0].state, 'warn');
+  g.blocks[0].state = 'solid'; g.update(DT); assert.ok(g.over, 'a solid blocker on the comet ends the run');
 });
 test('gems are collected on contact and score', () => {
   const g = new OrbitGame({ seed: 3 });
@@ -50,4 +52,28 @@ test('revive clears the ring and resumes', () => {
   g.update(DT); assert.ok(g.over);
   assert.ok(g.revive()); assert.ok(!g.over); assert.equal(g.blocks.length, 0);
   for (let t = 0; t < 1; t += DT) g.update(DT); assert.ok(!g.over);
+});
+
+test('a wall never closes on the comet: 0 deaths from closing walls (50 seeds x 60 s, comet never reverses into a solid wall)', async () => {
+  const { OrbitGame } = await import('../src/core/orbit.js');
+  let closeDeaths = 0;
+  for (let seed = 1; seed <= 50; seed++) {
+    const g = new OrbitGame({ seed }); let died = null;
+    g.on('gameover', (e) => { died = e; });
+    for (let t = 0; t < 60 && !g.over; t += 1 / 60) {
+      // a block that turned solid while the comet was already inside it would be a "closing wall" death
+      const before = g.blocks.filter(b => b.state === 'warn').map(b => b.id);
+      g.update(1 / 60);
+      if (died && before.includes(died.block.id)) closeDeaths++;
+    }
+  }
+  assert.equal(closeDeaths, 0);
+});
+test('momentum: gems score the multiplier, reversing resets it', async () => {
+  const { OrbitGame } = await import('../src/core/orbit.js');
+  const g = new OrbitGame({ seed: 3 });
+  g.gems = [{ id: 1, angle: g.angle, age: 0 }]; g.update(0.0001); assert.equal(g.score, 1); assert.equal(g.mult, 2);
+  g.gems = [{ id: 2, angle: g.angle, age: 0 }]; g.update(0.0001); assert.equal(g.score, 3); assert.equal(g.mult, 3);
+  g.tap(); assert.equal(g.mult, 1);
+  g.gems = [{ id: 3, angle: g.angle, age: 0 }]; g.update(0.0001); assert.equal(g.score, 4);
 });

@@ -325,7 +325,7 @@ class App {
     if (this.demo) return;
     this.sfx.throw_(); haptics.light();
     this.setState(STATE.FLIGHT);
-    this.hint('TAP WHEN IT TOUCHES THE WATER');
+    this.hint('TAP AS IT MEETS ITS REFLECTION');
   }
   onSkip(s) {
     const r = this.renderer;

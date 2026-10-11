@@ -9,11 +9,11 @@ const LS = { get(k, d) { try { const v = localStorage.getItem('orbit.' + k); ret
 const vib = (p, on) => { if (on) haptics.pulse(p); };
 const TAU = Math.PI * 2;
 class Fx {
-  constructor() { this.parts = []; this.pops = []; }
-  clear() { this.parts.length = 0; this.pops.length = 0; }
+  constructor() { this.parts = []; this.pops = []; this.shake = 0; }
+  clear() { this.parts.length = 0; this.pops.length = 0; this.shake = 0; }
   burst(x, y, color, n = 16, sp = 200) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, v = sp * (0.4 + Math.random()); this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, age: 0, life: 0.5 + Math.random() * 0.3, size: 2 + Math.random() * 3, color }); } }
   pop(text, x, y, opts = {}) { this.pops.push({ text, x, y, age: 0, life: opts.life ?? 0.9, size: opts.size ?? 24, color: opts.color ?? '#fff', rise: opts.rise ?? 40 }); }
-  update(dt) { for (const p of this.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy *= 0.97; } this.parts = this.parts.filter(p => p.age < p.life); for (const t of this.pops) t.age += dt; this.pops = this.pops.filter(t => t.age < t.life); }
+  update(dt) { this.shake = Math.max(0, this.shake - dt * 40); for (const p of this.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy *= 0.97; } this.parts = this.parts.filter(p => p.age < p.life); for (const t of this.pops) t.age += dt; this.pops = this.pops.filter(t => t.age < t.life); }
   draw(c) { for (const p of this.parts) { c.globalAlpha = 1 - p.age / p.life; c.fillStyle = p.color; c.beginPath(); c.arc(p.x, p.y, p.size, 0, TAU); c.fill(); } c.globalAlpha = 1; c.textAlign = 'center'; c.textBaseline = 'middle'; for (const t of this.pops) { const k = t.age / t.life, e = 1 - Math.pow(1 - k, 3); c.save(); c.globalAlpha = k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1; c.translate(t.x, t.y - e * t.rise); c.font = `900 ${t.size}px ui-rounded, -apple-system, "SF Pro Rounded", "Segoe UI", Roboto, Arial, sans-serif`; c.lineWidth = 5; c.lineJoin = 'round'; c.strokeStyle = 'rgba(0,0,0,0.35)'; c.strokeText(t.text, 0, 0); c.fillStyle = t.color; c.fillText(t.text, 0, 0); c.restore(); } }
 }
 class Sfx {
@@ -35,16 +35,22 @@ class App {
     this.canvas = $('game'); this.r = new Renderer(this.canvas); this.fx = new Fx(); this.sfx = new Sfx(); this.game = new OrbitGame();
     this.state = 'title'; this.time = 0; this.stateTime = 0; this.last = performance.now(); this.trail = []; this.autopilot = false; this.lastAuto = 0; this.lastHud = -1;
     this.best = LS.get('best', 0); this.games = LS.get('games', 0); this.muted = LS.get('muted', false); this.haptics = LS.get('haptics', true); this.sfx.setMuted(this.muted);
-    this.ui = { title: $('title'), hud: $('hud'), over: $('over'), score: $('score'), best: $('best'), overScore: $('over-score'), overBest: $('over-best'), newBest: $('new-best'), mute: $('mute') };
+    this.ui = { title: $('title'), hud: $('hud'), over: $('over'), score: $('score'), mult: $('mult'), best: $('best'), overScore: $('over-score'), overBest: $('over-best'), newBest: $('new-best'), mute: $('mute') };
     this.ui.best.textContent = this.best; this.ui.mute.classList.toggle('muted', this.muted);
     this.bindGame(); this.wireUi();
   }
   bindGame() {
     const g = this.game;
-    g.on('collect', (e) => { const [x, y] = this.r.pt(e.gem.angle); this.fx.burst(x, y, '#ffe66b'); this.sfx.gem(e.score); vib(10, this.haptics); if (this.ui.score) this.ui.score.textContent = e.score; });
-    g.on('block', () => { this.extras.coach('reverse', 'Tap to reverse'); });
-    g.on('reverse', () => { this.extras.coachDone('reverse'); this.sfx.reverse(); vib(6, this.haptics); const [x, y] = this.r.pt(g.angle); this.fx.burst(x, y, '#7df0ff', 8, 120); });
-    g.on('solid', () => { this.sfx.warn(); });
+    g.on('collect', (e) => {
+      const [x, y] = this.r.pt(e.gem.angle), m = e.points;
+      this.fx.burst(x, y, '#ffe66b', Math.min(36, 14 + m * 3)); this.sfx.gem(g.collected); vib(m >= 4 ? 18 : 10, this.haptics);
+      this.fx.pop(`+${m}`, x, y - 16, { size: 18 + Math.min(14, m * 2), color: m >= 6 ? 'hsl(300 100% 82%)' : m >= 3 ? '#ffe66b' : '#fff', life: 0.7, rise: 30 });
+      this.r.face.star = 1; this.setHud(e.score);
+      if (g.collected % 10 === 0) { this.r.face.pulse = 1; for (let i = 0; i < 2; i++) this.fx.burst(this.r.cx, this.r.cy - this.r.R, i ? '#fff8d0' : '#ffe66b', 18, 260); this.sfx.milestone(); }
+    });
+    g.on('block', () => { this.sfx.warn(); vib(6, this.haptics); this.extras.coach('reverse', 'Tap to reverse'); });
+    g.on('reverse', (e) => { this.extras.coachDone('reverse'); this.sfx.reverse(); vib(6, this.haptics); const [x, y] = this.r.pt(g.angle); this.fx.burst(x, y, '#7df0ff', 8, 120); this.r.face.squash = 1; if (e.lostMult >= 3) this.fx.pop(`×${e.lostMult} lost`, x, y - 18, { size: 15, color: 'rgba(255,255,255,0.7)', life: 0.6, rise: 18 }); this.setHud(g.score); });
+    g.on('through', (e) => { const [x, y] = this.r.pt(g.angle); this.fx.pop('THROUGH! +2', x, y - 22, { size: 22, color: '#ffe66b', life: 1, rise: 30 }); this.fx.burst(x, y, '#ffe66b', 20, 220); this.sfx.milestone(); vib(18, this.haptics); this.setHud(e.score); });
     g.on('milestone', (m) => this.fx.pop(m.name.toUpperCase(), this.r.w / 2, this.r.h * 0.2, { size: 26, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }));
     g.on('gameover', (e) => this.onOver(e));
   }
@@ -68,23 +74,26 @@ class App {
     seed = seed ?? this.extras.currentSeed(); this.extras.onStart(seed);
     this.seed = seed === undefined ? this.extras.newSeed() : seed;
     this.sfx.unlock(); this.extras.unlock();
-    this.game = new OrbitGame({ seed: this.seed }); this.bindGame(); this.fx.clear(); this.trail.length = 0; this.setState('play'); this.ui.score.textContent = '0';
+    this.game = new OrbitGame({ seed: this.seed }); this.bindGame(); this.fx.clear(); this.trail.length = 0; this.r.hideComet = false; this.setState('play'); this.setHud(0);
   }
-  revive() { if (!this.game.revive()) return false; this.fx.clear(); this.setState('play'); return true; }
+  revive() { if (!this.game.revive()) return false; this.fx.clear(); this.r.hideComet = false; this.setState('play'); this.setHud(this.game.score); return true; }
   press(e) { if (e.target && e.target.closest && e.target.closest('[data-ui]')) return; if (e.preventDefault) e.preventDefault(); this.sfx.unlock(); if (this.state === 'title') { this.extras.beforeStart(() => this.start()); return; } if (this.state === 'over') { if (this.stateTime > 0.6) this.start(); return; } this.game.tap(); }
   onOver(e) {
     this.sfx.crash(); vib([40, 40, 60], this.haptics); const [x, y] = this.r.pt(this.game.angle); this.fx.burst(x, y, '#fff', 30, 320); this.fx.burst(x, y, '#ff5a6e', 20, 200);
+    // the crash is a moment: flash the wall that did it, shake, hide the comet
+    this.r.killer = e.block; this.r.face.flash = 1; this.r.hideComet = true; if (!matchMedia('(prefers-reduced-motion: reduce)').matches) this.fx.shake = 14;
     this.games++; LS.set('games', this.games); const isBest = e.score > this.best; if (isBest) { this.best = e.score; LS.set('best', this.best); }
     this.ui.overScore.textContent = e.score; this.ui.overBest.textContent = this.best; this.ui.best.textContent = this.best; this.ui.newBest.hidden = !isBest || e.score === 0;
     setTimeout(() => { this.setState('over'); this.extras.onOver(e.score, { isBest }); }, 700);
   }
+  setHud(score) { if (!this.ui.score) return; this.ui.score.textContent = score; const el = this.ui.score; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); if (this.ui.mult) { this.ui.mult.textContent = this.game.mult > 1 ? `×${this.game.mult} momentum` : 'gems'; this.ui.mult.classList.toggle('hot', this.game.mult >= 4); } }
   frame(now) {
     let dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); if (this.extras && this.extras.paused) dt = 0; this.last = now; this.time += dt; this.stateTime += dt; const g = this.game;
     if (this.state === 'play') { if (this.autopilot && this.time - this.lastAuto > 0.25 && autopilot(g)) { g.tap(); this.lastAuto = this.time; } g.update(dt); }
     else if (this.state === 'title') { g.angle = ((g.angle + 1.2 * dt) % TAU + TAU) % TAU; }
     this.trail.push(g.angle); if (this.trail.length > 14) this.trail.shift();
     this.fx.update(dt);
-    this.r.draw(g, this.time, this.state === 'over' ? null : this.trail, this.fx);
+    this.r.draw(g, this.time, this.state === 'over' ? null : this.trail, this.fx, dt);
     requestAnimationFrame((t) => this.frame(t));
   }
 }
