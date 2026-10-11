@@ -73,16 +73,19 @@ export class Renderer {
   bodyScreen(b) { return [b.x * this.w, this.waterY * (1 - 0.62 * b.alt)]; }
 
   /* ───────────── cached layers ───────────── */
+  /** A cached full-screen layer. Canvases are reused (cleared), never reallocated per rebuild. */
   layer(name) {
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(this.w * this.dpr)); c.height = Math.max(1, Math.round(this.h * this.dpr));
-    const ctx = c.getContext('2d'); ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.cache[name] = c; return ctx;
+    const W = Math.max(1, Math.round(this.w * this.dpr)), H = Math.max(1, Math.round(this.h * this.dpr));
+    let c = this.cache[name];
+    if (!c || c.width !== W || c.height !== H) { c = document.createElement('canvas'); c.width = W; c.height = H; this.cache[name] = c; }
+    const ctx = c.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H); ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    return ctx;
   }
 
   /** Rebuild sky + water gradients when the phase has moved enough to notice. */
   ensureLayers(S, K, phase) {
-    if (Math.abs(phase - this.cache.phase) < 0.004 && this.cache.sky) return;
+    // ~10 m of lake between rebuilds: the light change is invisible, the saving is not
+    if (Math.abs(phase - this.cache.phase) < 0.03 && this.cache.sky) return;
     this.cache.phase = phase;
     const { w, h, waterY } = this;
     // sky

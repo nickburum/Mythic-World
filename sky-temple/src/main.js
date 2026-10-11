@@ -174,10 +174,16 @@ class App {
     const hue = stoneColors(r.block.index, this.seedHue).hue;
     this.sfx.perfect(r.combo);
     haptics.light();
-    this.fx.addRing(r.block, hue, r.combo >= 3 ? 2 : 1);
+    const k = r.combo, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.fx.addRing(r.block, hue, k >= 10 ? 3 : k >= 3 ? 2 : 1);
     const [px, py] = this.renderer.project(r.block.x, r.block.y + r.block.h, r.block.z, this.cam);
-    if (r.combo >= 2) {
-      this.fx.addPop(`×${r.combo}`, px, py - 40, { size: 30, color: '#fff' });
+    // escalation: a long streak must look like one
+    if (k >= 4) haptics.medium();
+    if (k >= 5) this.fx.addSparks(px, py, hue, Math.min(48, 12 + 3 * k), 1.1);
+    if (!reduced && (k === 5 || k % 10 === 0)) this.fx.addShake(k >= 10 ? 7 : 4);
+    if (k >= 2) {
+      const color = k >= 10 ? 'hsl(300 100% 84%)' : k >= 5 ? 'hsl(45 100% 76%)' : '#fff';
+      this.fx.addPop(`×${k}`, px, py - 40, { size: 26 + Math.min(k, 10) * 1.6, color });
     } else {
       this.fx.addPop('PERFECT', px, py - 40, { size: 24, color: '#fff' });
     }

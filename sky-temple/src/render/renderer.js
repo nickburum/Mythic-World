@@ -33,7 +33,8 @@ export class Renderer {
   /** @param {HTMLCanvasElement} canvas */
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+    this.ctx = canvas.getContext('2d', { alpha: false });   // opaque sky every frame
+    this.skyCache = new Map(); this.vignette = null;
     this.w = 0;
     this.h = 0;
     this.dpr = 1;
@@ -43,7 +44,9 @@ export class Renderer {
   }
 
   resize() {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // pixel budget: never more than ~1.4 Mpx of backing store
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(1.4e6 / Math.max(1, window.innerWidth * window.innerHeight)));
+    this.skyCache = new Map(); this.vignette = null;
     this.w = window.innerWidth;
     this.h = window.innerHeight;
     this.canvas.width = Math.round(this.w * this.dpr);
@@ -92,15 +95,19 @@ export class Renderer {
     return stars;
   }
 
+  /** Sky gradient, cached as a 1×256 strip per quarter-stone of height and stretched to the screen. */
   drawSky(heightStones) {
     const { ctx, w, h } = this;
-    const sky = skyColors(heightStones);
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, sky.top);
-    g.addColorStop(1, sky.bottom);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-    return sky;
+    const key = Math.round(heightStones * 4) / 4;
+    let hit = this.skyCache.get(key);
+    if (!hit) {
+      const sky = skyColors(key), cv = document.createElement('canvas'); cv.width = 1; cv.height = 256;
+      const c = cv.getContext('2d'), g = c.createLinearGradient(0, 0, 0, 256); g.addColorStop(0, sky.top); g.addColorStop(1, sky.bottom); c.fillStyle = g; c.fillRect(0, 0, 1, 256);
+      if (this.skyCache.size > 64) this.skyCache.clear();
+      hit = { cv, sky }; this.skyCache.set(key, hit);
+    }
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(hit.cv, 0, 0, w, h);
+    return skyColors(heightStones);
   }
 
   drawStars(night, cam, time) {
@@ -271,11 +278,13 @@ export class Renderer {
   /** Vignette to focus the eye and give HUD text contrast. */
   drawVignette() {
     const { ctx, w, h } = this;
-    const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.85);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.28)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+    if (!this.vignette) {   // once per resize, quarter resolution (a soft gradient), stretched
+      const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w / 4)); cv.height = Math.max(1, Math.round(h / 4));
+      const c = cv.getContext('2d'), W = cv.width, H = cv.height, g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.85);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.28)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+      this.vignette = cv;
+    }
+    ctx.drawImage(this.vignette, 0, 0, w, h);
   }
 }
 

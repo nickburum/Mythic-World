@@ -134,14 +134,15 @@ export class Effects {
       if (r.age < 0) continue;
       const t = r.age / r.life;
       const inflate = t * 0.45;
+      // glow without shadowBlur: three strokes, wide and faint to thin and bright
       ctx.save();
-      ctx.globalAlpha = (1 - t) * 0.9;
-      ctx.strokeStyle = hsl(r.hue, 90, 85);
-      ctx.lineWidth = Math.max(1.5, cam.K * 0.05 * (1 - t) + 1);
-      ctx.shadowColor = hsl(r.hue, 90, 75);
-      ctx.shadowBlur = 12;
       this.r.topFacePath(r.b, cam, inflate);
-      ctx.stroke();
+      const lw = Math.max(1.5, cam.K * 0.05 * (1 - t) + 1);
+      ctx.strokeStyle = hsl(r.hue, 90, 75);
+      ctx.globalAlpha = (1 - t) * 0.12; ctx.lineWidth = lw + 8; ctx.stroke();
+      ctx.globalAlpha = (1 - t) * 0.3; ctx.lineWidth = lw + 4; ctx.stroke();
+      ctx.strokeStyle = hsl(r.hue, 90, 85);
+      ctx.globalAlpha = (1 - t) * 0.9; ctx.lineWidth = lw; ctx.stroke();
       ctx.restore();
     }
   }
