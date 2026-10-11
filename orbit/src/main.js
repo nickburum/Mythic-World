@@ -42,7 +42,8 @@ class App {
   bindGame() {
     const g = this.game;
     g.on('collect', (e) => { const [x, y] = this.r.pt(e.gem.angle); this.fx.burst(x, y, '#ffe66b'); this.sfx.gem(e.score); vib(10, this.haptics); if (this.ui.score) this.ui.score.textContent = e.score; });
-    g.on('reverse', () => { this.sfx.reverse(); vib(6, this.haptics); const [x, y] = this.r.pt(g.angle); this.fx.burst(x, y, '#7df0ff', 8, 120); });
+    g.on('block', () => { this.extras.coach('reverse', 'Tap to reverse'); });
+    g.on('reverse', () => { this.extras.coachDone('reverse'); this.sfx.reverse(); vib(6, this.haptics); const [x, y] = this.r.pt(g.angle); this.fx.burst(x, y, '#7df0ff', 8, 120); });
     g.on('solid', () => { this.sfx.warn(); });
     g.on('milestone', (m) => this.fx.pop(m.name.toUpperCase(), this.r.w / 2, this.r.h * 0.2, { size: 26, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }));
     g.on('gameover', (e) => this.onOver(e));

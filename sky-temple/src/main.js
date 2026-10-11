@@ -133,6 +133,7 @@ class App {
     this.cam.K = this.camTarget.K;
     this.cam.focusY = this.camTarget.focusY;
     this.cam.anchor = this.camTarget.anchor;
+    this.extras.coach('drop', 'Tap to drop the stone', { at: 0.72 });
   }
 
   gameOver() {
@@ -163,11 +164,13 @@ class App {
   /* ───────────── game events ───────────── */
 
   onPlace() {
+    this.extras.coachDone('drop');
     this.updateScore(this.game.score);
     this.updateCameraTarget();
   }
 
   onPerfect(r) {
+    this.extras.coachDone('cut');
     const hue = stoneColors(r.block.index, this.seedHue).hue;
     this.sfx.perfect(r.combo);
     haptics.light();
@@ -185,6 +188,7 @@ class App {
   }
 
   onCut(r) {
+    this.extras.coach('cut', 'Overhang is cut off · line it up', { ms: 2600, at: 0.72 });
     this.sfx.place();
     haptics.light();
     this.fx.addFallingPiece(r.cut, r.axis, Math.sign(r.delta) || 1, this.seedHue);

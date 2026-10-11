@@ -1,7 +1,8 @@
 /**
  * Game Box — the features every game shares, wired in one call:
  *   • music (a per-game song, following the sound setting and the game state)
- *   • first-play tutorial (stepped overlay, shown once per game, replayable from the box)
+ *   • in-run coaching (one coach mark at the moment it matters, once per player; the ? button
+ *     opens a how-to sheet any time) — no slideshow before the first run
  *   • challenge a friend (seeded run + share link + versus line, hub-aware links)
  *   • continue by watching a rewarded ad (one per run)
  *
@@ -118,20 +119,36 @@ export function attachExtras(o) {
     wrap.querySelector('.skip-tut').addEventListener('click', finish);
     render();
   }
-  /** Run `cb` after the tutorial on first play, immediately afterwards. */
-  function beforeStart(cb) { if (o.steps && o.steps.length && !seen()) showTutorial(cb); else cb(); }
+  /** Start straight away: first-run teaching happens in the run (coach marks), never as a slideshow. */
+  function beforeStart(cb) { if (!seen()) { const all = LS.get('gamebox.tutorials', {}) || {}; all[o.id] = true; LS.set('gamebox.tutorials', all); } cb(); }
+
+  /* ─── coach marks: one line, at the moment it matters, once per player ─── */
+  const coachEl = el(`<div class="coach" role="status" aria-live="polite" hidden><span class="coach-dot" aria-hidden="true"></span><b></b></div>`);
+  document.body.appendChild(coachEl);
+  const coachSeen = () => LS.get('gamebox.coach', {}) || {};
+  let coachKey = null, coachT = 0;
+  /** Show `text` once per player for this key; it stays until coachDone(key) or `ms`. Returns true when shown. */
+  function coach(key, text, { ms = 6000, at = 0.64 } = {}) {
+    const k = `${o.id}.${key}`; if (coachSeen()[k] || coachKey === k) return false;
+    coachKey = k; coachEl.querySelector('b').textContent = text; coachEl.style.top = `${Math.round(at * 100)}%`; coachEl.hidden = false;
+    clearTimeout(coachT); coachT = setTimeout(() => coachDone(key), ms); return true;
+  }
+  function coachDone(key) {
+    const k = `${o.id}.${key}`; const all = coachSeen(); if (!all[k]) { all[k] = true; LS.set('gamebox.coach', all); }
+    if (coachKey === k) { coachKey = null; coachEl.hidden = true; clearTimeout(coachT); }
+  }
 
   /* ─── toast ─── */
   function toast(text) { let t = document.getElementById('toast'); if (!t) { t = el(`<div id="toast" class="toast" hidden></div>`); document.body.appendChild(t); } t.textContent = text; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => { t.hidden = true; }, 2200); }
 
   /* ─── lifecycle hooks the game calls ─── */
   const api = {
-    music, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share,
+    music, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share, coach, coachDone,
     unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); } },
-    onTitle() { music.setMode('title'); },
+    onTitle() { music.setMode('title'); if (coachKey) { coachEl.hidden = true; coachKey = null; } },
     onStart(seed) { state.usedContinue = false; if (seed === undefined) state.challenge = null; cont.hidden = true; versus.hidden = true; music.setMode('play'); },
     onOver(score, info = {}) {
-      state.lastScore = score; music.setMode('over');
+      state.lastScore = score; music.setMode('over'); if (coachKey) { coachEl.hidden = true; coachKey = null; }
       if (info.isBest && score > 0) { if (o.sfx && o.sfx.newBest) o.sfx.newBest(); else music.stingBest(); } else music.stingOver();
       if (state.challenge) { const d = score - state.challenge.score; versus.textContent = d > 0 ? `You beat ${state.challenge.tag} by ${fmt(d, o.unit)}` : d < 0 ? `${state.challenge.tag} wins by ${fmt(-d, o.unit)}` : `Dead heat with ${state.challenge.tag}`; versus.hidden = false; chal.textContent = 'Send result'; }
       else { versus.hidden = true; chal.textContent = 'Challenge a friend'; }

@@ -65,6 +65,7 @@ class App {
     this.seed = seed === undefined ? this.extras.newSeed() : seed;
     this.sfx.unlock(); this.extras.unlock();
     this.game = new PopGame({ seed: this.seed }); this.bindGame(); this.fx.clear(); this.setState('play'); this.hud(true);
+    const p = PALETTE[this.game.target]; this.extras.coach('rule', `Tap the ${p.glyph} ${p.name} bubbles`);
   }
   revive() { if (!this.game.revive()) return false; this.fx.clear(); this.setState('play'); this.hud(true); return true; }
   press(e) {
@@ -79,6 +80,7 @@ class App {
   /** Escalation: bigger, brighter, more particles the longer the chain. */
   onPop(e) {
     const b = e.bubble, x = this.game.bubbleX(b), h = PALETTE[b.color].h, k = e.combo, chain = e.chain || [b];
+    this.extras.coachDone('rule'); if (chain.length > 1) this.extras.coachDone('chain'); else if (this.game.score >= 4) this.extras.coach('chain', 'Touching bubbles pop together', { ms: 3500 });
     this.fx.burst(x, b.y, b.r, h, Math.min(40, 12 + 4 * k), k >= 6 ? 2 : 1);
     this.sfx.pop(k); vib(k >= 4 || chain.length > 1 ? 18 : 8, this.haptics); this.r.face.squash = 1; this.bump();
     // chain: each linked bubble bursts a beat later, climbing the scale
@@ -101,7 +103,7 @@ class App {
   onWrong(e) { const b = e.bubble; this.fx.burst(this.game.bubbleX(b), b.y, b.r, PALETTE[b.color].h, 8); this.fx.pop('WRONG', this.clampX(this.game.bubbleX(b)), b.y - 20, { size: 20, color: '#ff8a8a' }); this.sfx.wrong(); vib([20, 30, 20], this.haptics); if (!this.reduced) this.fx.shake = 10; this.r.face.wince = 1; this.loseDot(); }
   onLife(e) { if (e.reason === 'escape') { this.sfx.escape(); vib(30, this.haptics); this.r.face.wince = 1; this.loseDot(); this.fx.pop('MISSED', this.clampX(this.game.bubbleX(e.bubble)), 90, { size: 20, color: '#ff8a8a' }); } }
   clampX(x) { return Math.max(70, Math.min(CONFIG.WORLD_W - 70, x)); }
-  onTarget() { this.sfx.target(); vib(15, this.haptics); this.pulse = 1; const p = PALETTE[this.game.target]; this.fx.pop(`NOW ${p.glyph} ${p.name}`, CONFIG.WORLD_W / 2, 300, { size: 26, color: `hsl(${p.h} 90% 80%)`, life: 1.3, rise: 20 }); }
+  onTarget() { this.sfx.target(); vib(15, this.haptics); this.pulse = 1; const p = PALETTE[this.game.target]; this.extras.coach('switch', `New colour: ${p.glyph} ${p.name}`, { ms: 2200 }); this.fx.pop(`NOW ${p.glyph} ${p.name}`, CONFIG.WORLD_W / 2, 300, { size: 26, color: `hsl(${p.h} 90% 80%)`, life: 1.3, rise: 20 }); }
   bump() { const el = this.ui.score; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
   loseDot() { const el = this.ui.lives; el.classList.remove('lose'); void el.offsetWidth; el.classList.add('lose'); }
   onOver(e) {

@@ -194,7 +194,9 @@ class App {
   /* ───────────── first-play tutorial, music, continue ───────────── */
   firstPlay(cb) {
     const all = (() => { try { return JSON.parse(localStorage.getItem('gamebox.tutorials') || '{}') || {}; } catch { return {}; } })();
-    if (all.skip) return cb();
+    // no slideshow before the first throw: SKIP teaches in the run with its own hints
+    if (!all.skip) { all.skip = true; try { localStorage.setItem('gamebox.tutorials', JSON.stringify(all)); } catch {} }
+    return cb();
     let i = 0;
     const wrap = document.createElement('section'); wrap.className = 'overlay menu tutorial'; wrap.setAttribute('data-ui', '');
     wrap.innerHTML = '<div class="panel"><div class="tut-dots"></div><div class="tut-art"></div><b class="tut-title"></b><p class="tut-text"></p><button class="btn primary big" type="button">Next</button><button class="btn skip-tut" type="button">Skip</button></div>';
@@ -206,8 +208,8 @@ class App {
     render();
   }
   setupContinue() {
-    const btn = document.createElement('button'); btn.className = 'btn primary big'; btn.type = 'button'; btn.textContent = 'Continue · watch an ad'; btn.hidden = true;
-    const retry = $('retry'); retry.parentNode.insertBefore(btn, retry);
+    const btn = document.createElement('button'); btn.className = 'btn continue-btn'; btn.type = 'button'; btn.textContent = 'Continue · watch an ad'; btn.hidden = true;
+    const retry = $('retry'); retry.parentNode.insertBefore(btn, retry.nextSibling);    // an offer under Play again, not the main action
     this.ui.continue = btn;
     btn.addEventListener('click', async () => { btn.disabled = true; const ok = await ads.show(); btn.disabled = false; if (ok && this.revive()) { this.usedContinue = true; btn.hidden = true; } });
     ads.onChange(() => this.refreshContinue());

@@ -27,20 +27,19 @@ async function renderScreens(browser) {
   // the Continue offer only appears from the fourth run on: seed three earlier runs, then reload
   await page.evaluate(() => localStorage.setItem('pop.games', '3')); await page.reload(); await page.waitForFunction(() => !!window.__pop); await page.waitForTimeout(1500);
   await shot(page, 'title');
-  // first play: the Play button shows the tutorial, then starts the game
+  // first play: Play starts the run at once (no slideshow) and a coach mark teaches the rule in the run
   await page.click('#play'); await page.waitForTimeout(400);
-  const tut = await page.evaluate(() => !!document.querySelector('.tutorial'));
-  if (!tut) errors.push('tutorial did not appear on first play');
+  if (await page.evaluate(() => !!document.querySelector('.tutorial'))) errors.push('slideshow shown before the first run');
+  const st0 = await page.evaluate(() => window.__pop.state);
+  if (st0 !== 'play') errors.push(`Play did not start the run (${st0})`);
+  const coach = await page.evaluate(() => { const c = document.querySelector('.coach'); return c && !c.hidden ? c.textContent : ''; });
+  if (!/Tap the/.test(coach)) errors.push(`no coach mark on the first run (${coach})`);
   await shot(page, 'tutorial');
-  for (let i = 0; i < 3; i++) { await page.click('.tutorial .btn.primary'); await page.waitForTimeout(200); }
-  const st0 = await page.evaluate(() => window.__pop.state + '|' + !document.querySelector('.tutorial'));
-  if (st0 !== 'play|true') errors.push(`tutorial did not hand off to play (${st0})`);
   // second start must not show it again; a tap on the logo itself starts the game
   await page.evaluate(() => { const a = window.__pop; a.toTitle(); });
   await page.waitForTimeout(200);
   const logo = await page.$('#title .logo'); const box = await logo.boundingBox();
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); await page.waitForTimeout(300);
-  if (await page.evaluate(() => !!document.querySelector('.tutorial'))) errors.push('tutorial shown twice');
   if ((await page.evaluate(() => window.__pop.state)) !== 'play') errors.push('tapping the logo did not start the game');
   // the ? button replays the tutorial on demand
   await page.evaluate(() => window.__pop.toTitle()); await page.waitForTimeout(200);
