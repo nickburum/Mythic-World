@@ -84,7 +84,7 @@ class App {
     this.r.killer = e.block; this.r.face.flash = 1; this.r.hideComet = true; if (!matchMedia('(prefers-reduced-motion: reduce)').matches) this.fx.shake = 14;
     this.games++; LS.set('games', this.games); const isBest = e.score > this.best; if (isBest) { this.best = e.score; LS.set('best', this.best); }
     this.ui.overScore.textContent = e.score; this.ui.overBest.textContent = this.best; this.ui.best.textContent = this.best; this.ui.newBest.hidden = !isBest || e.score === 0;
-    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score, { isBest }); }, 700);
+    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score, { isBest, best: this.best }); }, 700);
   }
   setHud(score) { if (!this.ui.score) return; this.ui.score.textContent = score; const el = this.ui.score; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); if (this.ui.mult) { this.ui.mult.textContent = this.game.mult > 1 ? `×${this.game.mult} momentum` : 'gems'; this.ui.mult.classList.toggle('hot', this.game.mult >= 4); } }
   frame(now) {

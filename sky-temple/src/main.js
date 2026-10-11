@@ -151,7 +151,7 @@ class App {
     this.ui.newBest.hidden = !isBest || score === 0;
     this.ui.overCombo.textContent = this.game.bestCombo >= 3 ? `Best streak ×${this.game.bestCombo}` : '';
     this.setState(STATE.OVER);
-    this.extras.onOver(score, { isBest });
+    this.extras.onOver(score, { isBest, best: this.best, stats: { bestCombo: this.game.bestCombo } });
   }
 
   /** Rewarded continue: a fresh stone slides in, the tower and score stay. */

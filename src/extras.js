@@ -27,6 +27,7 @@ import { ads } from './ads.js';
 import { newSeed, cleanTag, challengeLink, challengeFromUrl } from './challenge.js';
 import { shareLink } from './share.js';
 import { attachPause } from './pause.js';
+import { awardRun, xpBlock, dailyFromHref, closeLine } from './progress.js';
 
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 const fmt = (n, unit) => (unit === ' m' ? (Math.round(n * 10) / 10).toFixed(1) : String(Math.round(n))) + unit;
@@ -40,7 +41,7 @@ export function attachExtras(o) {
   if (o.sfx) o.sfx.onSound = () => music.duck();
   // the hub tells us it is about to close the game: fade the song instead of cutting it
   window.addEventListener('message', (e) => { if (e.data && e.data.type === 'gamebox:leaving') music.stop(0.12); });
-  const state = { challenge: null, incoming: null, usedContinue: false, lastScore: 0 };
+  const state = { challenge: null, incoming: null, usedContinue: false, lastScore: 0, daily: dailyFromHref(o.id, location.href) };
   const tag = () => cleanTag(LS.get('skip.name', 'YOU'));     // one tag for the whole box
 
   /* ─── result sheet buttons ─── */
@@ -50,6 +51,8 @@ export function attachExtras(o) {
   const yearNow = new Date().getFullYear();
   const age = el(`<div class="age-ask" hidden><small>One quick question so any ads suit your age</small><div class="age-row"><label><span class="sr">Year you were born</span><select aria-label="Year you were born"><option value="">Year you were born</option>${Array.from({ length: 100 }, (_, i) => `<option>${yearNow - i}</option>`).join('')}</select></label><button class="btn small" type="button" disabled>OK</button></div></div>`);
   if (!panel.querySelector('.versus')) panel.insertBefore(versus, retry);
+  const progress = el(`<div class="progress-slot"><div class="close-line"></div></div>`);
+  panel.insertBefore(progress, panel.querySelector('.versus') || retry);
   panel.insertBefore(cont, retry.nextSibling);        // outline, under Play again: the ad is an offer, not the main action
   panel.insertBefore(age, cont.nextSibling);
   panel.insertBefore(chal, cont.nextSibling);
@@ -59,7 +62,16 @@ export function attachExtras(o) {
   title.insertBefore(banner, title.children[1] || null);
 
   function readIncoming() {
-    const c = challengeFromUrl(location.href); if (!c) return;
+    const c = challengeFromUrl(location.href);
+    if (!c && state.daily) {   // opened from the hub's Today card
+      banner.querySelector('b').textContent = "Today's run";
+      banner.querySelector('small').textContent = 'Same run for everyone today · bonus XP';
+      banner.querySelector('button').textContent = 'Play';
+      banner.hidden = false; state.dailyPending = true;
+      history.replaceState(null, '', location.pathname + location.search);
+      return;
+    }
+    if (!c) return;
     state.incoming = c;
     const b = banner.querySelector('b'), s = banner.querySelector('small'), btn = banner.querySelector('button');
     if (c.reply) { const win = c.score > c.reply.score; b.textContent = win ? `${c.reply.tag} fell short: ${fmt(c.reply.score, o.unit)}` : `${c.reply.tag} beat you: ${fmt(c.reply.score, o.unit)}`; s.textContent = `vs your ${fmt(c.score, o.unit)} · rematch?`; btn.textContent = 'Rematch'; }
@@ -68,6 +80,7 @@ export function attachExtras(o) {
     history.replaceState(null, '', location.pathname + location.search);
   }
   banner.querySelector('button').addEventListener('click', () => {
+    if (state.dailyPending && !state.incoming) { state.dailyPending = false; state.daily.active = true; banner.hidden = true; beforeStart(() => o.start(state.daily.seed)); return; }
     const c = state.incoming; if (!c) return;
     state.challenge = c.reply ? { seed: c.seed, tag: c.reply.tag, score: c.reply.score } : { seed: c.seed, tag: c.tag, score: c.score };
     banner.hidden = true;
@@ -149,17 +162,22 @@ export function attachExtras(o) {
     music, pause, get paused() { return pause.paused; }, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share, coach, coachDone,
     unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); } },
     onTitle() { music.setMode('title'); if (coachKey) { coachEl.hidden = true; coachKey = null; } },
-    onStart(seed) { state.usedContinue = false; if (seed === undefined) state.challenge = null; cont.hidden = true; versus.hidden = true; music.setMode('play'); },
+    onStart(seed) { state.usedContinue = false; if (seed === undefined) { state.challenge = null; if (state.daily) state.daily.active = false; } cont.hidden = true; versus.hidden = true; music.setMode('play'); },
     onOver(score, info = {}) {
       state.lastScore = score; music.setMode('over'); if (coachKey) { coachEl.hidden = true; coachKey = null; }
       if (info.isBest && score > 0) { if (o.sfx && o.sfx.newBest) o.sfx.newBest(); else music.stingBest(); } else music.stingOver();
+      // progress: XP for every run, the daily streak, and how close this run came
+      const award = awardRun(o.id, { score, isBest: !!info.isBest, daily: state.daily && state.daily.active ? state.daily : null, stats: info.stats || {} });
+      progress.querySelector('.close-line').textContent = info.isBest ? '' : closeLine(score, info.best, o.unit);
+      progress.querySelector('.xp-block')?.remove(); progress.appendChild(xpBlock(award));
+      try { window.parent !== window && window.parent.postMessage({ type: 'gamebox:progress' }, '*'); } catch {}
       if (state.challenge) { const d = score - state.challenge.score; versus.textContent = d > 0 ? `You beat ${state.challenge.tag} by ${fmt(d, o.unit)}` : d < 0 ? `${state.challenge.tag} wins by ${fmt(-d, o.unit)}` : `Dead heat with ${state.challenge.tag}`; versus.hidden = false; chal.textContent = 'Send result'; }
       else { versus.hidden = true; chal.textContent = 'Challenge a friend'; }
       requestAnimationFrame(refreshContinue);
     },
     setMuted(m) { music.setMuted(m); },
     hudTarget() { return state.challenge ? `Beat ${state.challenge.tag} · ${fmt(state.challenge.score, o.unit)}` : ''; },
-    currentSeed() { return state.challenge ? state.challenge.seed : undefined; },
+    currentSeed() { return state.challenge ? state.challenge.seed : state.daily && state.daily.active ? state.daily.seed : undefined; },
     newSeed,
   };
   // box-wide sound setting is stored per game as <id>.muted; respect it at attach time

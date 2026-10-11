@@ -31,6 +31,17 @@
       </button>
     </header>
 
+    <div id="level" class="level-strip" aria-label="Your level"><b id="lv">LV 1</b><div class="lv-bar"><i id="lv-fill"></i></div><small id="lv-xp">0 / 100 XP</small></div>
+
+    <section id="today" class="today-card" aria-labelledby="today-title">
+      <div class="today-head"><h2 id="today-title" class="section-title">Today</h2><span id="streak" class="streak"></span></div>
+      <div class="today-body">
+        <img id="today-icon" class="today-icon" alt="" width="56" height="56" />
+        <div class="today-text"><b id="today-name">POP</b><small id="today-sub">Same run for everyone today · bonus XP</small><div id="week" class="week" aria-label="This week"></div></div>
+        <button id="today-play" class="btn primary small" type="button">Play</button>
+      </div>
+    </section>
+
     <section id="hero" class="hero">
       <h2 class="section-title" id="hero-title">Jump back in</h2>
       <button id="hero-btn" class="hero-card" type="button">

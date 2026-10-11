@@ -18,6 +18,7 @@ import { ads } from '../../src/ads.js';
 import { challengeLink } from '../../src/challenge.js';
 import { shareLink } from '../../src/share.js';
 import { attachPause } from '../../src/pause.js';
+import { awardRun, xpBlock, dailyFromHref } from '../../src/progress.js';
 import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -65,6 +66,7 @@ class App {
     this.bindGame(); this.bindUi();
     this.board.onChange(() => this.renderBoardStatus());
     this.board.init(); this.renderBoardStatus();
+    this.daily = dailyFromHref('skip', location.href);   // opened from the hub's Today card: every throw this visit is today's lake
     this.readChallengeFromUrl();
     this.renderer.follow(0, 0, true);
     window.addEventListener('resize', () => this.renderer.resize());
@@ -299,6 +301,7 @@ class App {
     this.closePanels(); this.closeScreens(); this.unlockAudio();
     this.demo = false; this.autopilot = false;
     if (seed === undefined) this.challenge = null;
+    if (seed === undefined && this.daily) seed = this.daily.seed;
     this.game.resetWithSeed(seed === undefined ? newSeed() : seed);
     this.fx.clear(); this.trail.length = 0; this.renderer.follow(0, 0, true);
     this.setState(STATE.READY); this.usedContinue = false; this.music.setMode('play');
@@ -383,6 +386,10 @@ class App {
     this.ui.over.hidden = false;
     this.resultsShown = true;
     this.music.setMode('over'); this.refreshContinue();
+    const daily = this.daily && !this.challenge && this.game.seed === this.daily.seed ? this.daily : null;
+    const award = awardRun('skip', { distance: e.distance, isBest, daily, stats: { distance: e.distance, perfects: e.perfects, motes: e.motes } });
+    this.xpEl?.remove(); this.xpEl = xpBlock(award); this.ui.over.querySelector('.panel').insertBefore(this.xpEl, $('retry'));
+    try { window.parent !== window && window.parent.postMessage({ type: 'gamebox:progress' }, '*'); } catch {}
     if (isBest && e.distance >= 1) this.sfx.milestone(); else this.music.stingOver();
   }
 

@@ -142,7 +142,7 @@ class App {
     const d = this.death;
     this.ui.deathLine.textContent = d ? (DEATH_LINES[`${d.obstacle.type}:${d.phase}`] || '') : '';
     this.setState(STATE.OVER);
-    this.extras.onOver(score, { isBest });
+    this.extras.onOver(score, { isBest, best: this.best, stats: { closeCalls: this.game.closeCalls } });
   }
 
   /** Rewarded continue: back into the run where we died. */

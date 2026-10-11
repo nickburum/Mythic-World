@@ -1,6 +1,6 @@
 /* Game Box hub — offline cache for the launcher. Each game keeps its own worker in its folder. */
 const VERSION = 'gamebox-v4';
-const ASSETS = ['./', './index.html', './css/box.css', './src/box.js', './src/games.js', './src/cloud.js', './src/share.js', './src/haptics.js', './src/store.js', './manifest.webmanifest', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png',
+const ASSETS = ['./', './index.html', './css/box.css', './src/box.js', './src/games.js', './src/cloud.js', './src/share.js', './src/haptics.js', './src/store.js', './src/progress.js', './src/meta.js', './manifest.webmanifest', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png',
   './melt/art/icon-192.png', './skip/art/icon-192.png', './pop/art/icon-192.png', './orbit/art/icon-192.png', './sky-temple/art/icon-192.png'];
 // Code and pages: network first (a deploy reaches returning players at once), cache as the offline fallback.
 // Images: cache first. Only this worker's own old caches are deleted — never another game's.

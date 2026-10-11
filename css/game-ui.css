@@ -158,3 +158,22 @@ body:not([data-state="title"]) .help-btn { display: none; }
 .pause-card { display: grid; gap: 6px; justify-items: center; padding: 22px 34px; border-radius: 22px; border: 1px solid var(--line-2); background: var(--surface); text-align: center; }
 .pause-card b { font-size: 22px; font-weight: 900; letter-spacing: .3em; text-transform: uppercase; }
 .pause-card small { font-size: 13px; color: var(--ink-2); letter-spacing: .1em; }
+
+/* ─── progress on the result sheet ─── */
+.xp-block { display: grid; gap: 6px; padding: 10px 2px 2px; }
+.xp-block[hidden] { display: none; }
+.xp-top { display: flex; justify-content: space-between; align-items: baseline; }
+.xp-gain { font-size: 18px; font-weight: 900; color: #ffe08a; }
+.xp-lv { font-size: 11px; font-weight: 800; letter-spacing: .24em; color: var(--ink-2); }
+.xp-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
+.xp-bar i { display: block; height: 100%; width: var(--to); background: linear-gradient(90deg, #ffd36b, #ff9a5b); border-radius: 3px; animation: xp-fill .7s cubic-bezier(.2,.9,.2,1) .3s both; }
+@keyframes xp-fill { from { width: 0; } to { width: var(--to); } }
+.xp-parts { font-size: 11px; color: var(--ink-2); letter-spacing: .04em; }
+.level-up, .daily-done { justify-self: center; padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.level-up { background: #ffd36b; color: #2a1a00; animation: pill .38s cubic-bezier(.34,1.56,.64,1) .5s both; }
+.daily-done { border: 1px solid #ffd36b; color: #ffe08a; }
+.close-line { text-align: center; font-size: 13px; font-weight: 700; color: #ffd6a8; }
+.close-line:empty { display: none; }
+@media (prefers-reduced-motion: reduce) { .xp-bar i, .level-up { animation: none; } }
+
+.combo:empty { display: none; }

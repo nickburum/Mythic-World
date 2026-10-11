@@ -8,6 +8,7 @@ import { Cloud } from './cloud.js';
 import { shareHere } from './share.js';
 import { haptics } from './haptics.js';
 import { Store } from './store.js';
+import { readProgress } from './progress.js';
 
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -54,13 +55,33 @@ class Box {
         <div class="meta">${chip(g)}</div>
       </button>`).join('');
     this.refreshHero();
+    this.refreshProgress();
   }
 
   refreshBests() { this.render(); }
 
+  /** Level strip + Today card (daily run and streak). */
+  refreshProgress() {
+    const p = readProgress(), g = byId(p.daily.game) || GAMES[0];
+    $('lv').textContent = `LV ${p.lvl.level}`;
+    $('lv-fill').style.width = `${p.lvl.need ? Math.round(100 * p.lvl.into / p.lvl.need) : 100}%`;
+    $('lv-xp').textContent = p.lvl.need ? `${p.lvl.into} / ${p.lvl.need} XP` : 'Max level';
+    $('today-icon').src = `${g.path}art/icon-192.png`;
+    $('today-name').textContent = g.name;
+    $('today').style.setProperty('--accent', g.accent);
+    $('today-sub').textContent = p.daily.done ? `Done · best ${formatBest(g, p.daily.best)} · new run tomorrow` : 'Same run for everyone today · bonus XP';
+    $('today-play').textContent = p.daily.done ? 'Again' : 'Play';
+    $('streak').textContent = p.streak ? `${p.streak}-day streak${p.shield ? ' · shield' : ''}` : 'Start a streak';
+    $('streak').classList.toggle('on', p.streak > 0);
+    $('week').innerHTML = p.week.map(d => `<i class="${d.played ? 'on' : ''}${d.today ? ' now' : ''}" title="${d.key}"></i>`).join('');
+    this.dailyGame = g.id; this.dailyDate = p.today;
+  }
+
   refreshHero() {
     const g = this.heroGame();
-    this.ui.heroTitle.textContent = LS.get('gamebox.last', null) ? 'Jump back in' : 'Play now · 30 seconds';
+    // first launch: the Today card is the call to action; the hero appears once there is a game to jump back into
+    this.ui.hero.hidden = !LS.get('gamebox.last', null);
+    this.ui.heroTitle.textContent = 'Jump back in';
     this.ui.heroIcon.src = `${g.path}art/icon-192.png`;
     this.ui.heroName.textContent = g.name;
     this.ui.heroTagline.textContent = g.tagline;
@@ -71,6 +92,7 @@ class Box {
   bind() {
     this.ui.grid.addEventListener('click', (e) => { const card = e.target.closest('.card'); if (!card || this.opening) return; this.opening = true; card.classList.add('pressed'); vibrate(8); setTimeout(() => { this.opening = false; card.classList.remove('pressed'); this.open(card.dataset.id); }, 120); });
     this.ui.heroBtn.addEventListener('click', () => { vibrate(8); this.open(this.ui.heroBtn.dataset.id); });
+    $('today-play').addEventListener('click', () => { vibrate(8); this.open(this.dailyGame, `#d=${this.dailyDate}`); });
     this.ui.back.addEventListener('click', () => { vibrate(8); this.close(); });
     $('open-settings').addEventListener('click', () => { vibrate(8); this.ui.settings.hidden = false; });
     this.ui.soundBtn.addEventListener('click', () => { this.ui.optSound.checked = !this.ui.optSound.checked; this.ui.optSound.dispatchEvent(new Event('change')); });
@@ -93,7 +115,7 @@ class Box {
     window.addEventListener('hashchange', () => { const m = location.hash.match(/play=([a-z-]+)/); if (m && byId(m[1]) && (!this.current || this.current.id !== m[1])) this.open(m[1], location.hash.replace(/^#play=[a-z-]+&?/, '#')); else if (!m && this.current) this.close(false); });
     this.ui.frame.addEventListener('load', () => { this.ui.loading.classList.add('done'); this.ui.frame.style.opacity = 1; });   // cross-fade the game in
     // games inside the box hand their share requests up here, where the permissions live
-    window.addEventListener('message', (e) => { const d = e.data; if (d && d.type === 'gamebox:share') shareHere({ title: d.title, text: d.text, url: d.url }, { toast: (t) => this.toast(t) }); });
+    window.addEventListener('message', (e) => { const d = e.data; if (d && d.type === 'gamebox:progress') this.refreshProgress(); if (d && d.type === 'gamebox:share') shareHere({ title: d.title, text: d.text, url: d.url }, { toast: (t) => this.toast(t) }); });
     // fade the back pill while playing; any touch near the top brings it back
     let quietT; const quiet = () => { clearTimeout(quietT); this.ui.player.classList.remove('quiet'); quietT = setTimeout(() => this.ui.player.classList.add('quiet'), 2500); };
     this.ui.player.addEventListener('pointerdown', quiet); this.quiet = quiet;

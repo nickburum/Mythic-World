@@ -113,8 +113,8 @@ class App {
     const left = [...this.game.bubbles].sort((a, b) => a.y - b.y); this.game.bubbles = [];
     left.forEach((b, i) => setTimeout(() => this.fx.burst(this.game.bubbleX(b), b.y, b.r, PALETTE[b.color].h, 10), 90 + i * 40));
     const isBest = e.score > this.best; if (isBest) { this.best = e.score; LS.set('best', this.best); }
-    this.ui.overScore.textContent = e.score; this.ui.overBest.textContent = this.best; this.ui.best.textContent = this.best; this.ui.overCombo.textContent = `best combo ×${e.bestCombo}`; this.ui.newBest.hidden = !isBest || e.score === 0;
-    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score, { isBest }); }, 700);
+    this.ui.overScore.textContent = e.score; this.ui.overBest.textContent = this.best; this.ui.best.textContent = this.best; this.ui.overCombo.textContent = e.bestCombo >= 3 ? `best combo ×${e.bestCombo}` : ''; this.ui.newBest.hidden = !isBest || e.score === 0;
+    setTimeout(() => { this.setState('over'); this.extras.onOver(e.score, { isBest, best: this.best, stats: { bestCombo: e.bestCombo } }); }, 700);
   }
   hud(force) {
     const g = this.game;

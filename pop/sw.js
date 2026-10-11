@@ -1,5 +1,5 @@
 const VERSION = 'pop-v5';
-const ASSETS = ['./', './index.html', './css/style.css', '../css/game-ui.css', '../src/extras.js', '../src/share.js', '../src/music.js', '../src/haptics.js', '../src/pause.js', '../src/ads.js', '../src/challenge.js', './src/extras-config.js', '../switcher.js', './src/main.js', './src/core/pop.js', './src/render/renderer.js', './src/render/effects.js', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png'];
+const ASSETS = ['./', './index.html', './css/style.css', '../css/game-ui.css', '../src/extras.js', '../src/share.js', '../src/music.js', '../src/haptics.js', '../src/pause.js', '../src/progress.js', '../src/meta.js', '../src/games.js', '../src/ads.js', '../src/challenge.js', './src/extras-config.js', '../switcher.js', './src/main.js', './src/core/pop.js', './src/render/renderer.js', './src/render/effects.js', './art/icon.svg', './art/icon-192.png', './art/icon-512.png', './art/icon-180.png'];
 // Code and pages: network first (a deploy reaches returning players at once), cache as the offline fallback.
 // Images: cache first. Only this worker's own old caches are deleted — never another game's.
 const PREFIX = VERSION.replace(/-v[^-]*$/, '-');
