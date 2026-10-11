@@ -98,3 +98,8 @@ body[data-view="game"] .home { display: none; }
 
 /* short viewports (landscape web): sheets scroll instead of running off-screen */
 .sheet, .sheet .panel { max-height: calc(100dvh - 16px); overflow: auto; }
+
+.iap { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); margin-top: 8px; }
+.iap[hidden] { display: none; }
+.iap .note { margin: 0; }
+.tag-input { width: 84px; height: 40px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(255,255,255,.06); color: inherit; font: inherit; font-weight: 800; letter-spacing: .3em; text-align: center; text-transform: uppercase; }

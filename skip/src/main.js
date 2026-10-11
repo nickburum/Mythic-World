@@ -223,6 +223,7 @@ class App {
     if (!this.ageAsk) this.setupAgeAsk();
     this.ageAsk.hidden = !(offer && ads.needsAge);    // asked once, before any ad is ever requested (COPPA)
     this.ui.continue.hidden = !(offer && ads.available);
+    this.ui.continue.textContent = ads.adFree ? 'Continue' : 'Continue · watch an ad';
   }
   setupAgeAsk() {
     const y = new Date().getFullYear(), wrap = document.createElement('div');

@@ -7,6 +7,7 @@ import { GAMES, byId, readBest, formatBest, applySettings, SCORE_KEYS, gcScore }
 import { Cloud } from './cloud.js';
 import { shareHere } from './share.js';
 import { haptics } from './haptics.js';
+import { Store } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -28,6 +29,7 @@ class Box {
     this.cloud.onChange(() => { this.refreshBests(); this.toast('Scores restored from iCloud'); });
     this.cloud.init();
     this.setupNative();
+    this.setupStore();
     window.__box = this;
     // deep link: #play=skip opens a game straight away (used by the native shell and challenge links)
     const m = location.hash.match(/play=([a-z-]+)/);
@@ -120,6 +122,25 @@ class Box {
     this.syncScores();
     if (pop && location.hash.includes('play=')) { if (this.pushed) history.back(); else history.replaceState(null, '', location.pathname + location.search); }
     this.pushed = false;
+  }
+
+  /** "Go ad-free" + Restore, shown only where StoreKit exists (the iOS app). */
+  setupStore() {
+    const store = this.store = new Store(), wrap = $('iap'), buy = $('buy-adfree'), restore = $('restore');
+    const paint = () => {
+      wrap.hidden = !store.available;
+      buy.disabled = store.busy || store.adFree;
+      buy.textContent = store.adFree ? 'Ad-free · thank you' : store.price ? `Go ad-free · ${store.price}` : 'Go ad-free';
+      restore.disabled = store.busy;
+    };
+    store.onChange((_, justBought) => { paint(); if (justBought) this.toast('Ad-free unlocked · thank you'); });
+    buy.addEventListener('click', () => { vibrate(8); store.buy(); });
+    restore.addEventListener('click', () => { vibrate(8); store.restore(); this.toast('Checking your purchases…'); });
+    paint(); store.load();
+    // player tag (3 letters) signs challenge links in every game
+    const tag = $('opt-tag'), clean = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+    tag.value = (() => { try { return JSON.parse(localStorage.getItem('skip.name')) || ''; } catch { return ''; } })();
+    tag.addEventListener('input', () => { const v = clean(tag.value); tag.value = v; if (v) localStorage.setItem('skip.name', JSON.stringify(v)); });
   }
 
   /** The iOS shell calls this when the app resigns active (Control Center, a call): pause the run. */

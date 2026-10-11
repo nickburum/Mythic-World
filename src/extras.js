@@ -96,6 +96,7 @@ export function attachExtras(o) {
     const offer = !state.usedContinue && typeof o.revive === 'function' && over && !over.hidden && runs() >= 3;
     age.hidden = !(offer && ads.needsAge);            // asked once, before any ad is ever requested (COPPA)
     cont.hidden = !(offer && ads.available);
+    cont.textContent = ads.adFree ? 'Continue' : 'Continue · watch an ad';
   }
   const ageSel = age.querySelector('select'), ageOk = age.querySelector('button');
   ageSel.addEventListener('change', () => { ageOk.disabled = !ageSel.value; });

@@ -39,7 +39,6 @@ targets:
       properties:
         com.apple.developer.game-center: true
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
-        com.apple.developer.in-app-payments: []
     dependencies:
       - package: GoogleMobileAds
         product: GoogleMobileAds

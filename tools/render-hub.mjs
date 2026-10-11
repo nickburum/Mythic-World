@@ -51,7 +51,7 @@ async function renderScreens(browser) {
   await page.click('#open-settings'); await page.waitForTimeout(400); await shot(page, 'settings');
   const hasReplay = await page.evaluate(() => !!document.getElementById('replay-tutorials'));
   if (!hasReplay) errors.push('settings lacks the tutorial replay button');
-  await page.click('.sheet .btn.primary');
+  await page.click('.sheet .btn[data-close]');
   await page.click('#hero-btn'); await page.waitForTimeout(300); await page.click('#back'); await page.waitForTimeout(250);
   // every game opens
   for (const id of ['melt', 'pop', 'orbit', 'sky-temple']) {

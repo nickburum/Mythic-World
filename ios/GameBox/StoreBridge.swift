@@ -20,7 +20,7 @@ final class StoreBridge: NSObject, WKScriptMessageHandler {
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         switch type {
-        case "products": Task { await self.sendProducts() }
+        case "products": Task { await self.sendProducts(); await self.pushEntitlement() }   // page is ready: send both
         case "buy": if let id = body["id"] as? String { Task { await self.buy(id) } }
         case "restore": Task { try? await AppStore.sync(); await self.pushEntitlement() }
         default: break
