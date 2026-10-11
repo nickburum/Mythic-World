@@ -116,3 +116,12 @@ body[data-state="play"] .corner-btn, body[data-state="flight"] .corner-btn, body
 body:not([data-state="title"]) .help-btn { display: none; }
 .in-box .help-btn, .in-box .corner-btn { top: calc(var(--safe-top) + 58px); }
 @media (min-width: 640px) and (min-height: 600px) { .link-sheet { justify-content: center; padding: 20px; } }
+
+/* ─── neutral age question (asked once before any ad is requested) ─── */
+.age-ask { display: grid; gap: 8px; justify-items: center; padding: 12px 0 4px; border-top: 1px solid var(--line, rgba(255,255,255,.14)); }
+.age-ask[hidden] { display: none; }
+.age-ask small { font-size: 12px; color: var(--ink-2, rgba(255,255,255,.7)); letter-spacing: .02em; text-transform: none; }
+.age-row { display: flex; gap: 8px; align-items: center; justify-content: center; }
+.age-row select { height: 44px; min-width: 180px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line-2, rgba(255,255,255,.24)); background: rgba(255,255,255,.06); color: inherit; font: inherit; font-size: 15px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.btn.continue-btn { background: transparent; border: 1px solid var(--line-2, rgba(255,255,255,.3)); }

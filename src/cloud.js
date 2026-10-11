@@ -8,7 +8,7 @@
  * Pure functions are exported for tests; the Cloud class does the I/O.
  */
 export const SYNC_KEYS = ['melt.best', 'melt.games', 'skip.board', 'skip.friends', 'skip.games', 'skip.name', 'pop.best', 'pop.games', 'orbit.best', 'orbit.games', 'skytemple.best', 'skytemple.games', 'gamebox.tutorials',
-  'gamebox.xp', 'gamebox.runs', 'gamebox.daily', 'gamebox.days', 'gamebox.streak', 'gamebox.unlocks', 'gamebox.themes', 'gamebox.adfree', 'gamebox.tag'];
+  'gamebox.xp', 'gamebox.runs', 'gamebox.daily', 'gamebox.days', 'gamebox.streak', 'gamebox.unlocks', 'gamebox.themes', 'gamebox.adfree', 'gamebox.tag', 'gamebox.ageBand'];
 
 const parse = (raw) => { if (raw === null || raw === undefined) return undefined; try { return JSON.parse(raw); } catch { return raw; } };
 

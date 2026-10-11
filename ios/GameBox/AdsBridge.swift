@@ -7,10 +7,16 @@ import WebKit
 #if canImport(GoogleMobileAds)
 import GoogleMobileAds
 #endif
+#if canImport(UserMessagingPlatform)
+import UserMessagingPlatform
+#endif
 
 final class AdsBridge: NSObject, WKScriptMessageHandler {
     weak var webView: WKWebView?
     weak var presenter: UIViewController?
+    /// Set from the page's one-time age question. Nothing ad-related runs before it is answered.
+    private var childDirected = true
+    private var underAgeOfConsent = true
     /// Debug builds use Google's public TEST rewarded unit; release builds read `GADRewardedUnitID`
     /// from Info.plist (set it in ios/project.yml from your AdMob console). Never ship the test unit.
     static var rewardedUnitID: String {
@@ -25,19 +31,52 @@ final class AdsBridge: NSObject, WKScriptMessageHandler {
     private var rewarded: GADRewardedAd?
     private var loading = false
     private var watcher: AdDismissWatcher?      // fullScreenContentDelegate is weak: we must own it
+    private var started = false
     #endif
 
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         switch type {
-        case "load": load()
+        case "load":
+            childDirected = body["childDirected"] as? Bool ?? true          // unknown → safest
+            underAgeOfConsent = body["underAgeOfConsent"] as? Bool ?? true
+            load()
         case "show": show()
         default: break
         }
     }
 
+    /// COPPA / GDPR-K: configure the SDK for the player's age band, run Google's consent flow
+    /// (skipped for children), then start the SDK — once.
+    private func startIfNeeded(_ then: @escaping () -> Void) {
+        #if canImport(GoogleMobileAds)
+        let cfg = GADMobileAds.sharedInstance().requestConfiguration
+        cfg.tagForChildDirectedTreatment = NSNumber(value: childDirected)
+        cfg.tagForUnderAgeOfConsent = NSNumber(value: underAgeOfConsent)
+        cfg.maxAdContentRating = childDirected ? .general : .parentalGuidance
+        if started { then(); return }
+        started = true
+        #if canImport(UserMessagingPlatform)
+        if !childDirected {
+            let params = UMPRequestParameters()
+            params.tagForUnderAgeOfConsent = underAgeOfConsent
+            UMPConsentInformation.sharedInstance.requestConsentInfoUpdate(with: params) { _ in
+                UMPConsentForm.loadAndPresentIfRequired(from: nil) { _ in
+                    guard UMPConsentInformation.sharedInstance.canRequestAds else { return }
+                    GADMobileAds.sharedInstance().start { _ in then() }
+                }
+            }
+            return
+        }
+        #endif
+        GADMobileAds.sharedInstance().start { _ in then() }
+        #endif
+    }
+
     private func load() {
         #if canImport(GoogleMobileAds)
+        if !started { startIfNeeded { [weak self] in self?.load() }; return }
+        startIfNeeded {}
         guard !loading, !Self.rewardedUnitID.isEmpty else { if Self.rewardedUnitID.isEmpty { call("onReady", "false") }; return }
         loading = true
         GADRewardedAd.load(withAdUnitID: Self.rewardedUnitID, request: GADRequest()) { [weak self] ad, error in

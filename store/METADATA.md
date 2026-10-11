@@ -57,18 +57,22 @@ Everything **None** / **No**. Result: 4+. (No violence, no gambling, no user con
 ## App Privacy (with AdMob rewarded ads)
 | Data | Collected | Linked to user | Tracking | Purpose |
 |---|---|---|---|---|
-| Device ID (IDFA/IDFV) | Yes | No | Yes, if ATT allowed | Third-party advertising |
-| Advertising data | Yes | No | Yes, if ATT allowed | Third-party advertising |
+| Device ID (IDFV) | Yes | No | No | Third-party advertising |
+| Advertising data | Yes | No | No | Third-party advertising |
+| Coarse location (from IP) | Yes | No | No | Third-party advertising |
 | Product interaction | No | | | |
 | Crash data | No | | | |
-Game Center and iCloud data are handled by Apple and not declared. If you switch AdMob to **non-personalised ads only**, answer Tracking: No.
+**Tracking: No** (the app never calls the App Tracking Transparency prompt and ships no NSUserTrackingUsageDescription). Game Center and iCloud data are handled by Apple and not declared.
+
+AdMob settings to match: *Privacy & messaging* ▸ create a GDPR message (EU/UK consent); *Apps ▸ Game Box ▸ App settings* ▸ "Is your app directed to children?" ▸ **No / mixed audience** (the in-app age question tags under-13 players per request).
 
 ## Review notes (paste into "Notes" for the reviewer)
 ```
 Game Box is five small offline games in one app. No account is needed.
 - Game Center: used only for leaderboards. Any Game Center account works.
 - iCloud: Key-Value Storage backs up best scores (no user-facing UI).
-- Ads: a single rewarded video ("Continue · watch an ad") offered after a run ends. No banners, no interstitials. This build uses Google's test ad units.
+- Ads: a single rewarded video ("Continue · watch an ad") offered after a run ends, from the fourth run on. No banners, no interstitials. Before the first ad the app asks a neutral "year you were born" question once; under-13 players get child-directed, G-rated ad requests only. To see it: play any game four times.
+- In-app purchase: "Go ad-free" (non-consumable) removes the ad offer; Restore Purchases is in Settings.
 - Challenge links open https://nickburum.github.io/Mythic-World/ with a seed; the same seed produces the same run.
 Nothing is gated; every game is playable from the first screen.
 ```

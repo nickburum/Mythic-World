@@ -44,8 +44,11 @@ export function attachExtras(o) {
   const cont = el(`<button class="btn continue-btn" type="button" hidden>Continue · watch an ad</button>`);
   const chal = el(`<button class="btn" type="button">Challenge a friend</button>`);
   const versus = el(`<div class="versus" hidden></div>`);
+  const yearNow = new Date().getFullYear();
+  const age = el(`<div class="age-ask" hidden><small>One quick question so any ads suit your age</small><div class="age-row"><label><span class="sr">Year you were born</span><select aria-label="Year you were born"><option value="">Year you were born</option>${Array.from({ length: 100 }, (_, i) => `<option>${yearNow - i}</option>`).join('')}</select></label><button class="btn small" type="button" disabled>OK</button></div></div>`);
   if (!panel.querySelector('.versus')) panel.insertBefore(versus, retry);
   panel.insertBefore(cont, retry.nextSibling);        // outline, under Play again: the ad is an offer, not the main action
+  panel.insertBefore(age, cont.nextSibling);
   panel.insertBefore(chal, cont.nextSibling);
 
   /* ─── challenge banner on the title ─── */
@@ -86,7 +89,14 @@ export function attachExtras(o) {
   });
   ads.onChange(() => refreshContinue());
   const runs = () => LS.get(`${o.id}.games`, 0) || 0;     // no ad offer in the first three runs: learn first, then the bridge
-  function refreshContinue() { cont.hidden = !(ads.available && !state.usedContinue && typeof o.revive === 'function' && over && !over.hidden && runs() >= 3); }
+  function refreshContinue() {
+    const offer = !state.usedContinue && typeof o.revive === 'function' && over && !over.hidden && runs() >= 3;
+    age.hidden = !(offer && ads.needsAge);            // asked once, before any ad is ever requested (COPPA)
+    cont.hidden = !(offer && ads.available);
+  }
+  const ageSel = age.querySelector('select'), ageOk = age.querySelector('button');
+  ageSel.addEventListener('change', () => { ageOk.disabled = !ageSel.value; });
+  ageOk.addEventListener('click', () => { if (!ageSel.value) return; ads.setBirthYear(ageSel.value); age.hidden = true; toast('Thanks · ad settings saved'); });
 
   /* ─── title: taps on the logo / hint / empty space start the game; a ? button replays the tutorial ─── */
   if (o.titleTap) title.addEventListener('pointerdown', (e) => { if (e.target.closest('button, input, select, a, .banner')) return; e.preventDefault(); o.titleTap(); }, { passive: false });

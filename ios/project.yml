@@ -65,7 +65,7 @@ targets:
         GADApplicationIdentifier: ca-app-pub-3940256099942544~1458002511
         GADRewardedUnitID: ca-app-pub-3940256099942544/1712485313
         GADDelayAppMeasurementInit: true     # the SDK waits for the consent flow in GameBoxApp.swift
-        NSUserTrackingUsageDescription: Used to show ads that are more relevant to you. The game works the same either way.
+        # No NSUserTrackingUsageDescription: the box never shows the tracking prompt and never tracks.
         SKAdNetworkItems:
           - SKAdNetworkIdentifier: cstr6suwn9.skadnetwork
           - SKAdNetworkIdentifier: 4fzdc2evr5.skadnetwork

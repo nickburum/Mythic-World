@@ -212,7 +212,22 @@ class App {
     btn.addEventListener('click', async () => { btn.disabled = true; const ok = await ads.show(); btn.disabled = false; if (ok && this.revive()) { this.usedContinue = true; btn.hidden = true; } });
     ads.onChange(() => this.refreshContinue());
   }
-  refreshContinue() { this.ui.continue.hidden = !(ads.available && !this.usedContinue && this.state === STATE.SUNK && this.resultsShown && this.games >= 3); }
+  refreshContinue() {
+    const offer = !this.usedContinue && this.state === STATE.SUNK && this.resultsShown && this.games >= 3;
+    if (!this.ageAsk) this.setupAgeAsk();
+    this.ageAsk.hidden = !(offer && ads.needsAge);    // asked once, before any ad is ever requested (COPPA)
+    this.ui.continue.hidden = !(offer && ads.available);
+  }
+  setupAgeAsk() {
+    const y = new Date().getFullYear(), wrap = document.createElement('div');
+    wrap.className = 'age-ask'; wrap.hidden = true;
+    wrap.innerHTML = `<small>One quick question so any ads suit your age</small><div class="age-row"><select aria-label="Year you were born"><option value="">Year you were born</option>${Array.from({ length: 100 }, (_, i) => `<option>${y - i}</option>`).join('')}</select><button class="btn small" type="button" disabled>OK</button></div>`;
+    this.ui.continue.parentNode.insertBefore(wrap, this.ui.continue.nextSibling);
+    const sel = wrap.querySelector('select'), ok = wrap.querySelector('button');
+    sel.addEventListener('change', () => { ok.disabled = !sel.value; });
+    ok.addEventListener('click', () => { if (!sel.value) return; ads.setBirthYear(sel.value); wrap.hidden = true; });
+    this.ageAsk = wrap;
+  }
   revive() {
     if (!this.game.revive()) return false;
     this.resultsShown = false; this.setState(STATE.FLIGHT); this.music.setMode('play'); this.hint('');

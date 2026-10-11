@@ -54,3 +54,14 @@ test('meta keys merge by their own rules', () => {
   assert.deepEqual(JSON.parse(mergeValue('gamebox.days', '["2026-10-10"]', '["2026-10-09","2026-10-10"]')), ['2026-10-09', '2026-10-10']);
   assert.deepEqual(JSON.parse(mergeValue('gamebox.unlocks', '{"skip.midnight":200}', '{"skip.midnight":100,"melt.ember":300}')), { 'skip.midnight': 100, 'melt.ember': 300 });
 });
+
+test('age bands for the one-time ad age question (COPPA)', async () => {
+  const { ageBandFor } = await import('../src/ads.js');
+  const now = new Date('2026-10-11');
+  assert.equal(ageBandFor(2016, now), 'child');
+  assert.equal(ageBandFor(2014, now), 'child', '12 this year');
+  assert.equal(ageBandFor(2013, now), 'teen', '13 this year');
+  assert.equal(ageBandFor(2011, now), 'teen');
+  assert.equal(ageBandFor(2010, now), 'adult', '16 this year');
+  assert.equal(ageBandFor(1980, now), 'adult');
+});

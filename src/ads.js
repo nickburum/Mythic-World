@@ -7,8 +7,17 @@
  *   native → AdsBridge.onReady(true|false), AdsBridge.onResult({ rewarded: bool })
  * Web: no ads, unless `?testads=1` (or localStorage gamebox.testAds) turns
  * on a simulated 3-second ad so the flow can be exercised in a browser.
+ *
+ * Age (COPPA): no ad is requested — and the native SDK is not even started —
+ * until the player has answered a neutral "year you were born" question once.
+ * Under 13 → child-directed treatment + G-rated ads only; 13–15 → treated as
+ * under the EU age of consent; 16+ → standard non-personalised ads (we never
+ * show the tracking prompt). The answer is stored as a band, never the year.
  */
 const bridge = () => (typeof window !== 'undefined' && window.webkit?.messageHandlers?.ads) || null;
+export const ageBandFor = (birthYear, now = new Date()) => { const age = now.getFullYear() - birthYear; return age < 13 ? 'child' : age < 16 ? 'teen' : 'adult'; };
+const AGE_KEY = 'gamebox.ageBand';
+const readBand = () => { try { const v = JSON.parse(localStorage.getItem(AGE_KEY)); return ['child', 'teen', 'adult'].includes(v) ? v : null; } catch { return null; } };
 const simulated = () => { try { return /[?&]testads=1/.test(location.search) || localStorage.getItem('gamebox.testAds') === '1'; } catch { return false; } };
 
 export class Ads {
@@ -24,10 +33,14 @@ export class Ads {
     this.load();
   }
   get available() { return this.ready && (!!bridge() || simulated()); }
+  /** Native ads need the age question answered first. */
+  get needsAge() { return !!bridge() && !readBand(); }
+  get ageBand() { return readBand(); }
+  setBirthYear(y) { const band = ageBandFor(Number(y)); try { localStorage.setItem(AGE_KEY, JSON.stringify(band)); } catch {} this.load(); this.changed(); return band; }
   onChange(fn) { this.listeners.push(fn); }
   changed() { for (const fn of this.listeners) fn(this); }
   post(m) { try { bridge().postMessage(m); } catch { /* web */ } }
-  load() { if (bridge()) this.post({ type: 'load' }); }
+  load() { const band = readBand(); if (bridge() && band) this.post({ type: 'load', childDirected: band === 'child', underAgeOfConsent: band !== 'adult' }); }
   /** Show a rewarded ad. Resolves true when the reward was earned. */
   show() {
     if (!this.available) return Promise.resolve(false);
