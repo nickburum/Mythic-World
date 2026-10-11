@@ -58,7 +58,9 @@ jobs:
         env: { GAMEBOX_NO_OPEN: '1' }
         run: bash ios/bootstrap.sh
       - name: Build for the simulator
-        run: xcodebuild -project ios/GameBox.xcodeproj -scheme GameBox -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -40
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/GameBox.xcodeproj -scheme GameBox -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | grep -E 'error:|warning: .*GameBox/|BUILD (SUCCEEDED|FAILED)' | head -80
 
   deploy:
     needs: [test, smoke]

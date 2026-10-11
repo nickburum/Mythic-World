@@ -43,7 +43,7 @@ targets:
       - package: GoogleMobileAds
         product: GoogleMobileAds
       - package: GoogleUserMessagingPlatform
-        product: UserMessagingPlatform
+        product: GoogleUserMessagingPlatform   # SPM product name; the Swift module is `UserMessagingPlatform`
     info:
       path: GameBox/Info.plist
       properties:
