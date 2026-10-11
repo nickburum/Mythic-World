@@ -22,10 +22,26 @@ test('one tap cycles ice → water → steam → ice', () => {
   tapTo(g, 'steam'); tapTo(g, 'ice');
   assert.deepEqual(seen, ['steam', 'ice']);
 });
-test('taps are debounced', () => {
+test('a fast double tap is buffered, never lost', () => {
   const g = new MeltGame({ random: rng(3) }); placeOnly(g, 'beam', 5000);
-  assert.equal(g.tap(), 'steam'); assert.equal(g.tap(), null, 'second tap within the cooldown is ignored');
-  g.update(CONFIG.TAP_COOLDOWN + 0.01); assert.equal(g.tap(), 'ice');
+  assert.equal(g.tap(), 'steam'); assert.equal(g.tap(), null, 'second tap inside the cooldown is deferred');
+  g.update(CONFIG.TAP_COOLDOWN + 0.01); assert.equal(g.phase, 'ice', 'the deferred tap was applied');
+  g.update(CONFIG.TAP_COOLDOWN + 0.01); assert.equal(g.tap(), 'water');
+});
+test('the first two obstacles are beams (no tap needed), and no spikes arrive in the first 4 s', () => {
+  for (let seed = 1; seed <= 30; seed++) {
+    const g = new MeltGame({ random: rng(seed) });
+    const types = g.obstacles.filter(o => o.kind !== 'hazard').map(o => o.type);
+    g.on('spawn', (o) => { if (o.kind !== 'hazard') types.push(o.type); });
+    let died = false; g.on('die', () => { died = true; });
+    for (let t = 0; t < 4; t += 1 / 60) g.update(1 / 60);
+    assert.deepEqual(types.slice(0, 2), ['beam', 'beam'], `seed ${seed}`);
+    assert.ok(!died, `seed ${seed}: died in the first 4 s without tapping`);
+  }
+});
+test('a seed builds the same course on a phone and a tablet', () => {
+  const seq = (w) => { const g = new MeltGame({ random: rng(11) }); g.setViewWidth(w); g.reset(); const out = []; for (let t = 0; t < 40 && out.length < 25; t += 1 / 60) { for (const o of g.obstacles) if (!out.some(e => e.id === o.id)) out.push({ id: o.id, type: o.type }); g.update(1 / 60); if (g.over) { g.over = false; } } return out.slice(0, 25).map(o => o.type).join(','); };
+  assert.equal(seq(390), seq(1024));
 });
 test('steam floats up; anything else sinks', () => {
   const g = new MeltGame({ random: rng(4) }); placeOnly(g, 'beam', 5000);
@@ -46,7 +62,7 @@ test('hazards shove one step and never kill', () => {
   run(g, 1.5); assert.equal(hits, 1); assert.equal(g.phase, 'steam'); assert.ok(!g.over);
 });
 test('gaps are budgeted for the worst legitimate phase leaving an obstacle', () => {
-  const g = new MeltGame({ random: rng(7) }); g.score = 100;
+  const g = new MeltGame({ random: rng(7) }); g.score = 100; g.spawned = 102;
   const speed = g.speedForScore(100), d = CONFIG.DIFFICULTY_END;
   // leaving a beam as ice, spikes need two taps; leaving a beam as water, one tap → budget two
   assert.ok(Math.abs(g.gapAfter({ type: 'beam' }, 'spikes') - CONFIG.TIME_TWO * d * speed) < 1e-6);
@@ -59,7 +75,7 @@ test('gaps are budgeted for the worst legitimate phase leaving an obstacle', () 
 });
 test('types unlock with score; speed ramps and caps', () => {
   const g = new MeltGame({ random: rng(8) });
-  assert.deepEqual(g.unlockedTypes('obstacle').sort(), ['beam', 'spikes']); g.score = 30;
+  g.spawned = 0; assert.deepEqual(g.unlockedTypes('obstacle').sort(), ['beam', 'spikes']); g.score = 30; g.spawned = 32;
   assert.deepEqual(g.unlockedTypes('hazard').sort(), ['geyser', 'vent']);
   assert.equal(g.speedForScore(0), CONFIG.BASE_SPEED); assert.equal(g.speedForScore(1e6), CONFIG.MAX_SPEED);
 });

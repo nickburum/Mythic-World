@@ -5,7 +5,7 @@
  */
 import { CONFIG } from '../core/config.js';
 import { OBSTACLES, PHASE } from '../core/melt.js';
-import { PHASE_COLORS, OBSTACLE_COLORS, ROCK, skyForTemp, lerp } from '../core/palette.js';
+import { PHASE_COLORS, OBSTACLE_COLORS, ROCK, OUTLINE, skyForTemp, lerp } from '../core/palette.js';
 
 const TAU = Math.PI * 2;
 
@@ -17,7 +17,8 @@ function mulberry32(seed) {
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+    this.ctx = canvas.getContext('2d', { alpha: false });   // opaque backdrop every frame
+    this.skyCache = new Map();
     this.w = 0; this.h = 0; this.dpr = 1;
     this.scale = 1; this.ox = 0; this.oy = 0;
     this.motes = this.makeMotes();
@@ -25,8 +26,10 @@ export class Renderer {
   }
 
   resize() {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // pixel budget: never more than ~1.4 Mpx of backing store
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(1.4e6 / Math.max(1, window.innerWidth * window.innerHeight)));
     this.w = window.innerWidth; this.h = window.innerHeight;
+    this.skyCache = new Map(); this.vignette = null;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
     this.canvas.style.width = `${this.w}px`;
@@ -63,17 +66,25 @@ export class Renderer {
     return m;
   }
 
+  /** Sky for a temperature, cached as a small offscreen canvas per 2.5° step and stretched to the screen. */
+  skyFor(temp) {
+    const key = Math.round(temp / 2.5);
+    let cv = this.skyCache.get(key);
+    if (!cv) {
+      const sky = skyForTemp(key * 2.5), W = 96, H = 192; cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const c = cv.getContext('2d'), g = c.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, sky.top); g.addColorStop(1, sky.bottom); c.fillStyle = g; c.fillRect(0, 0, W, H);
+      const rg = c.createRadialGradient(W * 0.35, H * 0.5, 1, W * 0.35, H * 0.5, Math.max(W, H) * 0.6);
+      rg.addColorStop(0, sky.glow); rg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = rg; c.fillRect(0, 0, W, H);
+      if (this.skyCache.size > 48) this.skyCache.clear();
+      this.skyCache.set(key, cv);
+    }
+    return cv;
+  }
   drawSky(temp) {
     const { ctx, w, h } = this;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const sky = skyForTemp(temp);
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, sky.top); g.addColorStop(1, sky.bottom);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    // soft glow behind the play lane
-    const rg = ctx.createRadialGradient(w * 0.35, h * 0.5, 10, w * 0.35, h * 0.5, Math.max(w, h) * 0.6);
-    rg.addColorStop(0, sky.glow); rg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(this.skyFor(temp), 0, 0, w, h);
   }
 
   drawMotes(distance, time, temp) {
@@ -129,15 +140,17 @@ export class Renderer {
         const n = 3, bw = o.w / n, hgt = 64;
         for (let i = 0; i < n; i++) {
           const x0 = o.x + i * bw;
-          ctx.fillStyle = c.dark;
-          ctx.beginPath(); ctx.moveTo(x0, floor); ctx.lineTo(x0 + bw / 2, floor - hgt); ctx.lineTo(x0 + bw, floor); ctx.closePath(); ctx.fill();
-          ctx.fillStyle = c.fill;
-          ctx.beginPath(); ctx.moveTo(x0 + 3, floor); ctx.lineTo(x0 + bw / 2, floor - hgt + 6); ctx.lineTo(x0 + bw / 2 + 2, floor); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(x0, floor); ctx.lineTo(x0 + bw / 2, floor - hgt); ctx.lineTo(x0 + bw, floor); ctx.closePath();
+          ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = OUTLINE; ctx.stroke();
+          ctx.fillStyle = c.fill; ctx.fill();
+          ctx.fillStyle = c.dark; ctx.beginPath(); ctx.moveTo(x0 + bw / 2 + 1, floor - hgt + 4); ctx.lineTo(x0 + bw - 2, floor); ctx.lineTo(x0 + bw / 2 + 2, floor); ctx.closePath(); ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1;
+          ctx.fillStyle = c.core; ctx.beginPath(); ctx.moveTo(x0 + 4, floor); ctx.lineTo(x0 + bw / 2, floor - hgt + 8); ctx.lineTo(x0 + bw / 2 - 1, floor); ctx.closePath(); ctx.fill();
         }
         break;
       }
       case 'beam': {
         const hgt = 150;
+        ctx.lineWidth = 3; ctx.strokeStyle = OUTLINE; ctx.strokeRect(o.x - 1, top - 3, o.w + 2, hgt + 4);
         ctx.fillStyle = c.dark; ctx.fillRect(o.x, top - 2, o.w, hgt + 2);
         ctx.fillStyle = c.fill; ctx.fillRect(o.x + 4, top - 2, o.w - 12, hgt - 6);
         ctx.fillStyle = c.dark;
@@ -149,20 +162,25 @@ export class Renderer {
         break;
       }
       case 'glass': {
-        ctx.fillStyle = c.frame; ctx.fillRect(o.x, top, o.w, 10); ctx.fillRect(o.x, floor - 10, o.w, 10);
-        ctx.fillStyle = c.fill; ctx.fillRect(o.x + 6, top + 10, o.w - 12, floor - top - 20);
+        ctx.lineWidth = 3; ctx.strokeStyle = OUTLINE; ctx.strokeRect(o.x + 4, top - 1, o.w - 8, floor - top + 2);
+        ctx.fillStyle = c.frame; ctx.fillRect(o.x, top, o.w, 14); ctx.fillRect(o.x, floor - 14, o.w, 14);
+        const gl = ctx.createLinearGradient(o.x + 6, 0, o.x + o.w - 6, 0); gl.addColorStop(0, 'rgba(255,255,255,0.32)'); gl.addColorStop(1, c.fill);
+        ctx.fillStyle = gl; ctx.fillRect(o.x + 6, top + 14, o.w - 12, floor - top - 28);
         ctx.strokeStyle = c.edge; ctx.lineWidth = 2;
-        ctx.strokeRect(o.x + 6, top + 10, o.w - 12, floor - top - 20);
-        // glints
-        ctx.globalAlpha = 0.7;
-        ctx.beginPath(); ctx.moveTo(o.x + 12, top + 40); ctx.lineTo(o.x + 12, top + 120); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(o.x + 18, top + 140); ctx.lineTo(o.x + 18, top + 170); ctx.stroke();
+        ctx.strokeRect(o.x + 6, top + 14, o.w - 12, floor - top - 28);
+        // glints: two bright horizontal bars and two vertical streaks
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(o.x + 10, top + 60, o.w - 20, 3); ctx.fillRect(o.x + 10, floor - 80, o.w - 20, 3);
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath(); ctx.moveTo(o.x + 12, top + 90); ctx.lineTo(o.x + 12, top + 170); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(o.x + 18, top + 190); ctx.lineTo(o.x + 18, top + 220); ctx.stroke();
         ctx.globalAlpha = 1;
         break;
       }
       case 'pipe': {
+        ctx.lineWidth = 3; ctx.strokeStyle = OUTLINE; ctx.strokeRect(o.x - 1, top - 1, o.w + 2, floor - top + 2);
         ctx.fillStyle = c.fill; ctx.fillRect(o.x, top, o.w, floor - top);
         ctx.fillStyle = c.dark; ctx.fillRect(o.x + 6, top + 8, o.w - 12, floor - top - 70);
+        ctx.fillStyle = c.rail; ctx.fillRect(o.x + 2, top, 2, floor - top); ctx.fillRect(o.x + o.w - 4, top, 2, floor - top);
         // round opening at floor level
         const cx = o.x + o.w / 2, cy = floor - 30, r = 28;
         ctx.fillStyle = c.ring; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
@@ -171,6 +189,8 @@ export class Renderer {
         break;
       }
       case 'geyser': {
+        const base = ctx.createRadialGradient(o.x + o.w / 2, floor, 2, o.x + o.w / 2, floor, o.w * 0.7); base.addColorStop(0, 'rgba(40,10,0,0.5)'); base.addColorStop(1, 'rgba(40,10,0,0)');
+        ctx.fillStyle = base; ctx.fillRect(o.x - 12, floor - 40, o.w + 24, 44);
         ctx.fillStyle = '#222b44'; ctx.fillRect(o.x, floor - 6, o.w, 10);
         ctx.fillStyle = '#0d1424';
         for (let x = o.x + 6; x < o.x + o.w - 6; x += 10) ctx.fillRect(x, floor - 4, 5, 6);
@@ -182,6 +202,8 @@ export class Renderer {
           ctx.beginPath(); ctx.moveTo(fx - 7, floor - 4); ctx.quadraticCurveTo(fx, floor - fh * 0.6, fx, floor - fh); ctx.quadraticCurveTo(fx, floor - fh * 0.6, fx + 7, floor - 4); ctx.closePath(); ctx.fill();
           ctx.fillStyle = c.dark; ctx.globalAlpha = 0.9;
           ctx.beginPath(); ctx.moveTo(fx - 3, floor - 4); ctx.quadraticCurveTo(fx, floor - fh * 0.4, fx, floor - fh * 0.55); ctx.quadraticCurveTo(fx, floor - fh * 0.4, fx + 3, floor - 4); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = c.core; ctx.globalAlpha = 0.9;   // white-hot inner tongue: reads on any sky
+          ctx.beginPath(); ctx.moveTo(fx - 1.5, floor - 4); ctx.quadraticCurveTo(fx, floor - fh * 0.3, fx, floor - fh * 0.45); ctx.quadraticCurveTo(fx, floor - fh * 0.3, fx + 1.5, floor - 4); ctx.closePath(); ctx.fill();
         }
         ctx.globalAlpha = 1;
         break;
@@ -358,9 +380,14 @@ export class Renderer {
 
   drawVignette() {
     const { ctx, w, h } = this;
+    if (!this.vignette) {   // painted once per resize at a quarter resolution, stretched (it is a soft gradient)
+      const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w / 4)); cv.height = Math.max(1, Math.round(h / 4));
+      const c = cv.getContext('2d'), W = cv.width, H = cv.height;
+      const g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.85);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.3)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+      this.vignette = cv;
+    }
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.85);
-    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.3)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(this.vignette, 0, 0, w, h);
   }
 }

@@ -59,6 +59,6 @@ Obstacle spacing is a **time budget, not a distance**, so it stays fair as speed
 ## Store copy
 
 **Title:** MELT — Ice, Water, Steam
-**Subtitle:** Hold to heat. Release to cool.
+**Subtitle:** Tap to change state: ice, water, steam.
 **Keywords:** melt, ice, steam, water, physics, runner, one tap, hyper casual, temperature, science
-**Description:** Your finger is a flame. Hold to heat your little drop into steam and float over spikes. Let go to cool into water and flow through pipes. Freeze solid to smash glass. Every obstacle needs a different state of matter, and every second counts. One finger. Three forms. How far can you run?
+**Description:** One tap changes what you are: ice, then water, then steam. Float over spikes as steam, flow through pipes as water, freeze solid to smash glass. Every obstacle needs a different state of matter, and every second counts. One finger. Three forms. How far can you run?

@@ -57,17 +57,19 @@ export class MeltGame {
     this.altitude = 0;
     this.speed = c.BASE_SPEED;
     this.distance = 0; this.score = 0; this.closeCalls = 0; this.time = 0;
-    this.lastPhaseChange = -10; this.lastTap = -10;
+    this.lastPhaseChange = -10; this.lastTap = -10; this.queuedTap = false; this.spawned = 0;
     this.over = false; this.deathPhase = null; this.milestoneIdx = 0; this.nextId = 1;
     this.obstacles = []; this.lastObstacle = null; this.prevObstacleType = null; this.pendingType = null;
     this.spawnX = this.spawnX || c.SPAWN_X;
-    this.nextSpawnX = this.spawnX + 80;
+    this.nextSpawnX = c.SPAWN_X + 80;           // fixed world position: the course never depends on screen width
     this.seen = {};
     this.fillAhead();
     this.emit('reset', this);
   }
 
-  difficulty() { const c = this.config; const t = Math.min(1, this.score / c.DIFFICULTY_RAMP); return c.DIFFICULTY_START + (c.DIFFICULTY_END - c.DIFFICULTY_START) * t; }
+  /** Course generation runs on a counter of obstacles placed (not live score), so a seed builds the same course on any screen. */
+  get genScore() { return Math.max(0, this.spawned - 2); }
+  difficulty() { const c = this.config; const t = Math.min(1, this.genScore / c.DIFFICULTY_RAMP); return c.DIFFICULTY_START + (c.DIFFICULTY_END - c.DIFFICULTY_START) * t; }
   speedForScore(score) { const c = this.config; return Math.min(c.MAX_SPEED, c.BASE_SPEED + score * c.SPEED_PER_PASS); }
 
   setPhase(p) {
@@ -79,13 +81,14 @@ export class MeltGame {
   /** The one input. Returns the new phase, or null when debounced / over. */
   tap() {
     if (this.over) return null;
-    if (this.time - this.lastTap < this.config.TAP_COOLDOWN) return null;
+    // a tap inside the cooldown is buffered (applied a moment later), never lost: fast double taps are routine
+    if (this.time - this.lastTap < this.config.TAP_COOLDOWN) { this.queuedTap = true; return null; }
     this.lastTap = this.time;
     this.setPhase(nextPhase(this.phase));
     return this.phase;
   }
 
-  unlockedTypes(kind) { return Object.keys(OBSTACLES).filter(t => OBSTACLES[t].kind === kind && this.score >= this.config.UNLOCK[t]); }
+  unlockedTypes(kind) { return Object.keys(OBSTACLES).filter(t => OBSTACLES[t].kind === kind && this.genScore >= this.config.UNLOCK[t]); }
 
   /** Time budget (seconds) for `n` taps. */
   timeBudgetForTaps(n) { const c = this.config; const base = n === 0 ? c.TIME_SAME : n === 1 ? c.TIME_ONE : c.TIME_TWO; return base * this.difficulty(); }
@@ -99,10 +102,12 @@ export class MeltGame {
     const from = OBSTACLES[o.type].needs, to = OBSTACLES[nextType].needs;
     let worst = 0;
     for (const p of from) { let best = 2; for (const q of to) best = Math.min(best, tapsBetween(p, q)); worst = Math.max(worst, best); }
-    return this.timeBudgetForTaps(worst) * this.speedForScore(this.score);
+    return this.timeBudgetForTaps(worst) * this.speedForScore(this.genScore);
   }
 
   chooseNext(o) {
+    // the first two obstacles of a run are beams: water passes them with no tap, so nobody dies in the first seconds
+    if (this.spawned < 2 && (this.config.UNLOCK.beam ?? 0) === 0) return 'beam';
     const types = this.unlockedTypes('obstacle');
     const pool = types.length > 1 && o && o.type === this.prevObstacleType ? types.filter(t => t !== o.type) : types;
     return pool[Math.floor(this.random() * pool.length)];
@@ -111,6 +116,7 @@ export class MeltGame {
   spawn(type, x) {
     const c = this.config, def = OBSTACLES[type];
     this.seen[type] = (this.seen[type] || 0) + 1;
+    if (def.kind !== 'hazard') this.spawned++;
     const o = { id: this.nextId++, type, kind: def.kind, x, w: def.kind === 'hazard' ? c.HAZARD_W : c.OBSTACLE_W, passed: false, applied: false, hint: this.seen[type] <= 3 };
     this.obstacles.push(o); this.emit('spawn', o); return o;
   }
@@ -119,12 +125,12 @@ export class MeltGame {
     const c = this.config;
     while (this.nextSpawnX <= this.spawnX + this.speed * 0.5 + 60) {
       const type = this.pendingType || this.chooseNext(null);
-      const x = Math.max(this.nextSpawnX, this.spawnX);
+      const x = this.nextSpawnX;
       const o = this.spawn(type, x);
       this.prevObstacleType = this.lastObstacle ? this.lastObstacle.type : null;
       this.lastObstacle = o;
       this.pendingType = this.chooseNext(o);
-      const speed = this.speedForScore(this.score);
+      const speed = this.speedForScore(this.genScore);
       let gap = this.gapAfter(o, this.pendingType);
       const hazards = this.unlockedTypes('hazard');
       if (hazards.length && gap / speed >= c.HAZARD_MIN_TIME && this.random() < c.HAZARD_CHANCE) {
@@ -140,6 +146,7 @@ export class MeltGame {
     if (this.over) return;
     const c = this.config;
     this.time += dt;
+    if (this.queuedTap && this.time - this.lastTap >= c.TAP_COOLDOWN) { this.queuedTap = false; this.tap(); }
     const targetAlt = this.phase === PHASE.STEAM ? 1 : 0;
     const step = c.FLOAT_SPEED * dt;
     if (Math.abs(targetAlt - this.altitude) <= step) this.altitude = targetAlt; else this.altitude += Math.sign(targetAlt - this.altitude) * step;

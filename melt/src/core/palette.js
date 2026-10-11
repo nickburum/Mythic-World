@@ -27,7 +27,8 @@ export function skyForTemp(temp) {
   // cold: deep blue → teal; hot: deep maroon → ember. The hue travels the
   // long way round (teal → violet → magenta → red → orange) like a thermal map.
   const topH = lerp(214, 352, t), topS = lerp(55, 48, t), topL = lerp(20, 16, t);
-  const botH = lerp(192, 384, t), botS = lerp(62, 85, t), botL = lerp(42, 50, t);
+  // the lane stays calm (capped saturation/lightness) so every obstacle reads against it at any temperature
+  const botH = lerp(192, 384, t), botS = lerp(50, 62, t), botL = lerp(38, 44, t);
   return {
     top: hsl(topH, topS, topL),
     bottom: hsl(botH, botS, botL),
@@ -37,12 +38,13 @@ export function skyForTemp(temp) {
 
 /** Obstacle colours. */
 export const OBSTACLE_COLORS = Object.freeze({
-  spikes: { fill: '#ff5e6c', dark: '#b33446', hint: PHASE_COLORS.steam.text },
+  spikes: { fill: '#ff8a94', core: '#ffd1d6', dark: '#5a1424', hint: PHASE_COLORS.steam.text },
   beam:   { fill: '#7b8cb0', dark: '#4b5a7c', hint: '#ffd36b' },
-  glass:  { fill: 'rgba(200, 240, 255, 0.28)', edge: 'rgba(255,255,255,0.85)', frame: '#8fd6f0', hint: PHASE_COLORS.ice.text },
-  pipe:   { fill: '#2b3b5c', dark: '#1a2640', ring: '#9fb0d1', hint: PHASE_COLORS.water.text },
-  geyser: { fill: '#ff9a3c', dark: '#ffd36b', hint: '#ffb36b' },
+  glass:  { fill: 'rgba(220, 245, 255, 0.45)', edge: 'rgba(255,255,255,0.9)', frame: '#bdf0ff', hint: PHASE_COLORS.ice.text },
+  pipe:   { fill: '#3b4f78', dark: '#24335a', ring: '#9fb0d1', rail: '#9fb0d1', hint: PHASE_COLORS.water.text },
+  geyser: { fill: '#ff9a3c', dark: '#ffd36b', core: '#fff3c4', hint: '#ffb36b' },
   vent:   { fill: '#dff6ff', dark: '#9fe3ff', hint: '#bdf0ff' },
 });
 
 export const ROCK = Object.freeze({ fill: '#15203a', edge: '#2a3a5f', seam: 'rgba(255,255,255,0.06)' });
+export const OUTLINE = 'rgba(11,16,32,0.6)';

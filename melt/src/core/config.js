@@ -11,7 +11,7 @@ export const CONFIG = Object.freeze({
   PLAYER_R: 22,
 
   START_PHASE: 'water',
-  TAP_COOLDOWN: 0.08,       // seconds between accepted taps (debounce, not a mechanic)
+  TAP_COOLDOWN: 0.06,       // seconds between applied taps; a tap inside it is buffered, never dropped
 
   /* vertical motion: altitude 0 = floor, 1 = ceiling */
   FLOAT_SPEED: 5.0,
