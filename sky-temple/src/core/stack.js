@@ -212,7 +212,9 @@ export class StackGame {
     let grew = false;
     let type;
 
-    if (Math.abs(delta) <= c.PERFECT_TOLERANCE) {
+    // the perfect window never shrinks below ~70 ms of travel, however fast the stone slides
+    const tolerance = Math.max(c.PERFECT_TOLERANCE, (this.moving ? this.moving.speed : 0) * 0.035);
+    if (Math.abs(delta) <= tolerance) {
       // ── perfect: snap onto the stone below ──
       type = 'perfect';
       this.combo += 1;

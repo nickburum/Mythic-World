@@ -32,6 +32,7 @@ final class AdsBridge: NSObject, WKScriptMessageHandler {
     private var loading = false
     private var watcher: AdDismissWatcher?      // fullScreenContentDelegate is weak: we must own it
     private var started = false
+    private var consentChecked = false
     #endif
 
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -42,41 +43,64 @@ final class AdsBridge: NSObject, WKScriptMessageHandler {
             underAgeOfConsent = body["underAgeOfConsent"] as? Bool ?? true
             load()
         case "show": show()
+        case "privacyOptions": presentPrivacyOptions()
         default: break
         }
     }
 
-    /// COPPA / GDPR-K: configure the SDK for the player's age band, run Google's consent flow
-    /// (skipped for children), then start the SDK — once.
-    private func startIfNeeded(_ then: @escaping () -> Void) {
+    /// COPPA / GDPR-K: configure the SDK for the player's age band and run Google's consent flow
+    /// (skipped for children). `then` runs only when ads may be requested; the consent check runs on
+    /// every load, so an unfinished or declined form never lets a request through later.
+    private func ensureConsent(_ then: @escaping () -> Void) {
         #if canImport(GoogleMobileAds)
         let cfg = GADMobileAds.sharedInstance().requestConfiguration
         cfg.tagForChildDirectedTreatment = NSNumber(value: childDirected)
         cfg.tagForUnderAgeOfConsent = NSNumber(value: underAgeOfConsent)
         cfg.maxAdContentRating = childDirected ? .general : .parentalGuidance
-        if started { then(); return }
-        started = true
+        let startSDK = { [weak self] in
+            guard let self = self else { return }
+            if self.started { then(); return }
+            self.started = true
+            GADMobileAds.sharedInstance().start { _ in then() }
+        }
         #if canImport(UserMessagingPlatform)
         if !childDirected {
+            let info = UMPConsentInformation.sharedInstance
             let params = UMPRequestParameters()
             params.tagForUnderAgeOfConsent = underAgeOfConsent
-            UMPConsentInformation.sharedInstance.requestConsentInfoUpdate(with: params) { _ in
+            info.requestConsentInfoUpdate(with: params) { [weak self] _ in
                 UMPConsentForm.loadAndPresentIfRequired(from: nil) { _ in
-                    guard UMPConsentInformation.sharedInstance.canRequestAds else { return }
-                    GADMobileAds.sharedInstance().start { _ in then() }
+                    // tell the page whether a "Privacy choices" entry is required (EEA/UK)
+                    self?.call("onPrivacy", info.privacyOptionsRequirementStatus == .required ? "true" : "false")
+                    guard info.canRequestAds else { self?.consentChecked = false; self?.call("onReady", "false"); return }
+                    startSDK()
                 }
             }
             return
         }
         #endif
-        GADMobileAds.sharedInstance().start { _ in then() }
+        startSDK()
+        #endif
+    }
+
+    /// Settings ▸ Privacy choices: lets EEA/UK players change their ad consent at any time.
+    private func presentPrivacyOptions() {
+        #if canImport(UserMessagingPlatform)
+        guard let vc = presenter else { return }
+        UMPConsentForm.presentPrivacyOptionsForm(from: vc) { [weak self] _ in self?.load() }
         #endif
     }
 
     private func load() {
         #if canImport(GoogleMobileAds)
-        if !started { startIfNeeded { [weak self] in self?.load() }; return }
-        startIfNeeded {}
+        if !consentChecked { consentChecked = true; ensureConsent { [weak self] in self?.consentChecked = false; self?.requestAd() }; return }
+        #else
+        call("onReady", "false")
+        #endif
+    }
+
+    private func requestAd() {
+        #if canImport(GoogleMobileAds)
         guard !loading, !Self.rewardedUnitID.isEmpty else { if Self.rewardedUnitID.isEmpty { call("onReady", "false") }; return }
         loading = true
         GADRewardedAd.load(withAdUnitID: Self.rewardedUnitID, request: GADRequest()) { [weak self] ad, error in

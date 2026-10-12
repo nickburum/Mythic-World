@@ -33,7 +33,7 @@ export function dailyFromHref(gameId, href, now = new Date()) {
  * Credit a finished run. `daily` is { date, seed } when the run was today's daily.
  * Returns the award for the result sheet: { total, base, best, daily, weekend, before, after, leveledUp, streak, firstDaily }.
  */
-export function awardRun(gameId, { score = 0, distance, isBest = false, daily = null, stats = {} } = {}, now = new Date()) {
+export function awardRun(gameId, { score = 0, distance, isBest = false, daily = null, stats = {}, continued = false } = {}, now = new Date()) {
   let dailyInfo = null, streakCount = 0;
   if (daily && daily.date === dateKey(now)) {
     const saved = LS.get('gamebox.daily', null);
@@ -50,7 +50,7 @@ export function awardRun(gameId, { score = 0, distance, isBest = false, daily = 
   const award = runXp(gameId, { score, distance, isBest, daily: dailyInfo, ...stats }, now);
   const xp0 = LS.get('gamebox.xp', 0) || 0, before = level(xp0), after = level(xp0 + award.total);
   if (award.total > 0) LS.set('gamebox.xp', xp0 + award.total);
-  LS.set('gamebox.runs', (LS.get('gamebox.runs', 0) || 0) + 1);
+  if (!continued) LS.set('gamebox.runs', (LS.get('gamebox.runs', 0) || 0) + 1);
   return { ...award, before, after, leveledUp: after.level > before.level, streak: streakCount, firstDaily: !!(dailyInfo && dailyInfo.first) };
 }
 

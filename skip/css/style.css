@@ -100,3 +100,4 @@ html, body { background: #1a2a4a; }
 .distance { font-size: clamp(56px, 18vw, 92px); font-weight: 900; line-height: 1; text-shadow: 0 6px 30px rgba(0,0,0,.35); transform-origin: center; }
 .distance .unit { font-size: .4em; margin-left: 4px; letter-spacing: 0; }
 .btn-row .btn { white-space: nowrap; padding-inline: 12px; letter-spacing: .14em; font-size: 13px; }
+.distance.bump { animation: bump .22s cubic-bezier(.34,1.56,.64,1); }

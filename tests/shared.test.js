@@ -60,8 +60,9 @@ test('age bands for the one-time ad age question (COPPA)', async () => {
   const now = new Date('2026-10-11');
   assert.equal(ageBandFor(2016, now), 'child');
   assert.equal(ageBandFor(2014, now), 'child', '12 this year');
-  assert.equal(ageBandFor(2013, now), 'teen', '13 this year');
-  assert.equal(ageBandFor(2011, now), 'teen');
-  assert.equal(ageBandFor(2010, now), 'adult', '16 this year');
+  assert.equal(ageBandFor(2013, now), 'child', 'turns 13 this year: may still be 12');
+  assert.equal(ageBandFor(2012, now), 'teen');
+  assert.equal(ageBandFor(2010, now), 'teen', 'turns 16 this year: may still be 15');
+  assert.equal(ageBandFor(2009, now), 'adult');
   assert.equal(ageBandFor(1980, now), 'adult');
 });

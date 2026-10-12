@@ -20,13 +20,26 @@ const only = process.argv.includes('--size') ? process.argv[process.argv.indexOf
 
 /** The story the listing tells, frame by frame. Every run uses a fixed seed so the set is repeatable. */
 const FRAMES = [
-  { name: 'box', caption: 'Five games.\nOne finger.', sub: 'Pick one and play in seconds', setup: async (page) => { await page.goto(BASE); await page.waitForFunction(() => !!window.__box); await page.waitForTimeout(700); } },
-  { name: 'sky-temple', caption: 'Stack stones\nto the gods', sub: 'Drop it perfect and the tower grows back', setup: async (page) => { await game(page, 'sky-temple', '__skyTemple', async (f) => {
+  { name: 'sky-temple', caption: 'Five one-tap\ngames', sub: 'Stack, pop, skip, orbit, melt', setup: async (page) => { await game(page, 'sky-temple', '__skyTemple', async (f) => {
     await f.evaluate(() => window.__skyTemple.start(42));
     for (const off of [0, 0.14, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) { await f.evaluate((o) => { const a = window.__skyTemple, m = a.game.moving; m[m.axis] = a.game.top()[m.axis] + o; a.game.drop(); }, off); await f.waitForTimeout(90); }
     await f.waitForTimeout(1600); await f.evaluate(() => { const a = window.__skyTemple, m = a.game.moving; m[m.axis] = a.game.top()[m.axis]; a.game.drop(); }); await f.waitForTimeout(160); }); } },
-  { name: 'pop', caption: 'Pop the ones\nthat match', sub: 'Touching bubbles pop together', setup: async (page) => { await game(page, 'pop', '__pop', async (f) => { await f.evaluate(() => { const a = window.__pop; a.start(11); a.autopilot = true; }); await f.waitForFunction(() => window.__pop.game.score >= 12 && window.__pop.game.bubbles.length >= 5, null, { timeout: 60000 }); }); } },
-  { name: 'skip', caption: 'Skip a stone\nacross the sunset', sub: 'Tap as it meets its reflection', setup: async (page) => { await game(page, 'skip', '__skip', async (f) => { await f.evaluate(() => { const a = window.__skip; a.start(); a.autopilot = true; }); await f.waitForFunction(() => window.__skip.state === 'flight' && window.__skip.game.skips >= 4, null, { timeout: 60000 }); await f.waitForFunction(() => { const g = window.__skip.game; return g.stone.y > 0.25 && g.stone.vy < 0; }, null, { timeout: 30000 }); }); } },
+  { name: 'pop', caption: 'Pop the ones\nthat match', sub: 'Touching bubbles pop together', setup: async (page) => { await game(page, 'pop', '__pop', async (f) => { await f.evaluate(() => { const a = window.__pop; a.start(11); a.autopilot = true; }); await f.waitForFunction(() => window.__pop.game.score >= 10, null, { timeout: 60000 });
+    // stop the autopilot, let bubbles gather, then pop a real cluster of 3+ in the middle of the stage
+    await f.evaluate(() => { window.__pop.autopilot = false; });
+    await f.waitForFunction(() => {
+      const a = window.__pop, g = a.game, T = g.target;
+      if (g.over) return true;
+      for (const b of g.bubbles) {
+        const x = g.bubbleX(b); if (b.color !== T || x < 90 || x > 300 || b.y < 260 || b.y > 600) continue;
+        const near = g.bubbles.filter(o => o !== b && o.color === T && Math.hypot(g.bubbleX(o) - x, o.y - b.y) <= 80).length;
+        if (near >= 2 && g.bubbles.length >= 7) { g.tap(x, b.y); return true; }
+      }
+      return false;
+    }, null, { timeout: 60000, polling: 16 }).catch(() => {});
+    await f.waitForTimeout(110); }); } },
+  { name: 'box', caption: 'A new run\nevery day', sub: 'Keep your streak, level up across all five', setup: async (page) => { await page.goto(BASE); await page.waitForFunction(() => !!window.__box); await page.waitForTimeout(700); } },
+  { name: 'skip', caption: 'Skip a stone\nacross the sunset', sub: 'Tap as it meets its reflection', setup: async (page) => { await game(page, 'skip', '__skip', async (f) => { await f.evaluate(() => { const a = window.__skip; a.start(); a.autopilot = true; }); await f.waitForFunction(() => window.__skip.state === 'flight' && window.__skip.game.skips >= 4, null, { timeout: 60000 }); await f.waitForFunction(() => { const g = window.__skip.game; return g.stone.y > 0.25 && g.stone.vy < 0 && window.__skip.fx.pops.length <= 1; }, null, { timeout: 30000 }); }); } },
   { name: 'orbit', caption: 'One tap.\nReverse. Dodge.', sub: 'Hold your line for a bigger multiplier', setup: async (page) => { await game(page, 'orbit', '__orbit', async (f) => { await f.evaluate(() => { const a = window.__orbit; a.start(5); a.autopilot = true; }); await f.waitForFunction(() => window.__orbit.game.score >= 8 && window.__orbit.game.blocks.length >= 1, null, { timeout: 60000 }); }); } },
   { name: 'melt', caption: 'Ice. Water.\nSteam.', sub: 'Tap to change state when it counts', setup: async (page) => { await game(page, 'melt', '__melt', async (f) => { await f.evaluate(() => { const a = window.__melt; a.start(9); a.autopilot = true; }); await f.waitForFunction(() => window.__melt.game.score >= 8 && window.__melt.game.phase === 'steam', null, { timeout: 60000 }); }); } },
   { name: 'challenge', caption: 'Challenge\nyour friends', sub: 'Same run, same luck. Who wins?', setup: async (page) => { await game(page, 'pop', '__pop', async (f) => { await f.evaluate(() => { const a = window.__pop; a.extras.challenge.challenge = { seed: 7, tag: 'SAM', score: 18 }; a.start(7); a.autopilot = true; }); await f.waitForFunction(() => window.__pop.game.score >= 22, null, { timeout: 90000 }); await f.evaluate(() => { window.__pop.autopilot = false; }); await f.waitForFunction(() => window.__pop.state === 'over', null, { timeout: 90000 }); await f.waitForTimeout(1100); }); } },
@@ -39,7 +52,7 @@ const SEED_STORAGE = { 'pop.best': '64', 'skytemple.best': '41', 'orbit.best': '
 // a returning player is mid-streak and a few levels in (dates are relative to today, so the hub reads right on any day)
 const dkey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return dkey(d); };
-Object.assign(SEED_STORAGE, { 'gamebox.xp': '980', 'gamebox.days': JSON.stringify([6, 5, 4, 3, 2, 1].map(ago)), 'gamebox.streak': JSON.stringify({ count: 6, best: 6, last: ago(1), shield: 0 }) });
+Object.assign(SEED_STORAGE, { 'gamebox.xp': '980', 'gamebox.days': JSON.stringify([5, 4, 3, 2, 1, 0].map(ago)), 'gamebox.streak': JSON.stringify({ count: 6, best: 6, last: ago(0), shield: 0 }) });
 
 /** Store frames show the game, not the box's chrome. */
 const HIDE_CHROME = '.back-pill, .corner-btn, .help-btn, .gsw-handle, .gsw, .coach, #toast { display: none !important; }';
@@ -55,7 +68,7 @@ async function game(page, id, hook, play) {
   await play(frame);
 }
 
-async function startServer() { const proc = spawn('npx', ['http-server', ROOT, '-p', String(PORT), '-s', '-c-1'], { stdio: 'ignore' }); for (let i = 0; i < 50; i++) { try { if ((await fetch(BASE)).ok) return proc; } catch {} await new Promise(r => setTimeout(r, 200)); } proc.kill(); throw new Error('server did not start'); }
+async function startServer() { const proc = spawn('npx', ['http-server', ROOT, '-p', String(PORT), '-s', '-c-1'], { stdio: 'ignore' }); for (let i = 0; i < 150; i++) { try { if ((await fetch(BASE)).ok) return proc; } catch {} await new Promise(r => setTimeout(r, 200)); } proc.kill(); throw new Error('server did not start'); }
 
 const composer = (png, caption, sub, W, H) => `<!doctype html><html><body style="margin:0;width:${W}px;height:${H}px;overflow:hidden;background:#0b1020;font-family:ui-rounded,-apple-system,'SF Pro Rounded','Segoe UI',Roboto,Arial,sans-serif;color:#fff">
 <div style="position:absolute;inset:0;background:radial-gradient(90% 55% at 50% 0%, #1b2a55 0%, #0b1020 70%)"></div>

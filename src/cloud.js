@@ -8,7 +8,7 @@
  * Pure functions are exported for tests; the Cloud class does the I/O.
  */
 export const SYNC_KEYS = ['melt.best', 'melt.games', 'skip.board', 'skip.friends', 'skip.games', 'skip.name', 'pop.best', 'pop.games', 'orbit.best', 'orbit.games', 'skytemple.best', 'skytemple.games', 'gamebox.tutorials',
-  'gamebox.xp', 'gamebox.runs', 'gamebox.daily', 'gamebox.days', 'gamebox.streak', 'gamebox.unlocks', 'gamebox.themes', 'gamebox.adfree', 'gamebox.tag', 'gamebox.ageBand'];
+  'gamebox.xp', 'gamebox.runs', 'gamebox.daily', 'gamebox.days', 'gamebox.streak', 'gamebox.unlocks', 'gamebox.themes', 'gamebox.tag', 'gamebox.ageBand'];   // ad-free is not synced: StoreKit is its only source (refunds must stick)
 
 const parse = (raw) => { if (raw === null || raw === undefined) return undefined; try { return JSON.parse(raw); } catch { return raw; } };
 

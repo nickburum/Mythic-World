@@ -65,6 +65,8 @@ export class Effects {
 
   /** Floating text ("PERFECT", "x5", zone names). */
   addPop(text, px, py, opts = {}) {
+    // one pop per slot: a new banner or combo line retires the previous one instead of printing over it
+    if (opts.slot) for (const q of this.pops) if (q.slot === opts.slot) q.life = Math.min(q.life, q.age + 0.08);
     this.pops.push({
       text, x: px, y: py,
       age: 0, life: opts.life ?? 0.9,
@@ -72,6 +74,7 @@ export class Effects {
       color: opts.color ?? '#fff',
       rise: opts.rise ?? 60,
       weight: opts.weight ?? 800,
+      slot: opts.slot,
     });
   }
 

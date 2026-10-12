@@ -54,7 +54,7 @@ class App {
   bindGame() {
     const g = this.game;
     g.on('pop', (e) => this.onPop(e)); g.on('wrong', (e) => this.onWrong(e)); g.on('life', (e) => this.onLife(e)); g.on('target', () => this.onTarget()); g.on('gameover', (e) => this.onOver(e));
-    g.on('milestone', (m) => { this.sfx.milestone(); this.fx.pop(m.name.toUpperCase(), CONFIG.WORLD_W / 2, 330, { size: 30, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }); this.fx.burst(CONFIG.WORLD_W / 2, 330, 30, 45, 24); });
+    g.on('milestone', (m) => { this.sfx.milestone(); this.fx.pop(m.name.toUpperCase(), CONFIG.WORLD_W / 2, 330, { slot: 'banner', size: 30, color: 'hsl(45 100% 78%)', life: 1.6, rise: 24 }); this.fx.burst(CONFIG.WORLD_W / 2, 330, 30, 45, 24); });
     g.on('frenzy', () => this.onFrenzy()); g.on('frenzyEnd', () => { this.ui.hud.classList.remove('frenzy'); });
   }
   click() { this.sfx.unlock(); this.extras.unlock(); this.sfx.tap(); }
@@ -87,23 +87,24 @@ class App {
     const g = this.game;
     chain.slice(1).forEach((o, i) => { const ox = g.bubbleX(o); setTimeout(() => { this.fx.burst(ox, o.y, o.r, h, 14, 1); this.sfx.pop(k + i + 1); }, 60 * (i + 1)); });
     if (chain.length > 1) {
-      this.fx.pop(`CHAIN ×${chain.length}  +${e.points}`, CONFIG.WORLD_W / 2, 330, { size: 24 * Math.min(1.6, 1 + 0.12 * chain.length), color: chain.length >= 4 ? 'hsl(300 100% 82%)' : 'hsl(45 100% 75%)', life: 1.1, rise: 26 });
+      this.lastChain = { n: chain.length, x, y: b.y, t: performance.now() };
+      this.fx.pop(`CHAIN ×${chain.length}  +${e.points}`, CONFIG.WORLD_W / 2, 420, { slot: 'combo', size: 24 * Math.min(1.6, 1 + 0.12 * chain.length), color: chain.length >= 4 ? 'hsl(300 100% 82%)' : 'hsl(45 100% 75%)', life: 1.1, rise: 26 });
       if (chain.length >= 4) { this.flash = 0.7; this.fx.shower(x, b.y, 24, [h, h, 'w']); if (!this.reduced) this.fx.shake = 6; }
     } else if (k >= 3) {
       const size = 22 * Math.min(1.6, 1 + 0.08 * (k - 1)), color = k >= 6 ? 'hsl(300 100% 82%)' : k >= 4 ? 'hsl(45 100% 75%)' : '#fff';
-      this.fx.pop(e.points > 1 ? `×${k}  +${e.points}` : `×${k}`, x, b.y - 20, { size, color });
+      this.fx.pop(e.points > 1 ? `×${k}  +${e.points}` : `×${k}`, x, b.y - 20, { size, color, slot: 'combo' });
     }
     if (!this.reduced && (k === 5 || k % 10 === 0)) { this.fx.shake = k >= 10 ? 7 : 4; this.hitStop = 0.06; }
   }
   onFrenzy() {
     this.sfx.milestone(); vib([20, 20, 40], this.haptics); this.flash = 1; this.ui.hud.classList.add('frenzy');
-    this.fx.pop('FRENZY!', CONFIG.WORLD_W / 2, 330, { size: 40, color: 'hsl(300 100% 85%)', life: 1.4, rise: 30 });
+    this.fx.pop('FRENZY!', CONFIG.WORLD_W / 2, 330, { slot: 'banner', size: 40, color: 'hsl(300 100% 85%)', life: 1.4, rise: 30 });
     this.fx.shower(CONFIG.WORLD_W / 2, 330, 40, [340, 200, 150, 42, 270, 'w']);
   }
   onWrong(e) { const b = e.bubble; this.fx.burst(this.game.bubbleX(b), b.y, b.r, PALETTE[b.color].h, 8); this.fx.pop('WRONG', this.clampX(this.game.bubbleX(b)), b.y - 20, { size: 20, color: '#ff8a8a' }); this.sfx.wrong(); vib([20, 30, 20], this.haptics); if (!this.reduced) this.fx.shake = 10; this.r.face.wince = 1; this.loseDot(); }
   onLife(e) { if (e.reason === 'escape') { this.sfx.escape(); vib(30, this.haptics); this.r.face.wince = 1; this.loseDot(); this.fx.pop('MISSED', this.clampX(this.game.bubbleX(e.bubble)), 90, { size: 20, color: '#ff8a8a' }); } }
   clampX(x) { return Math.max(70, Math.min(CONFIG.WORLD_W - 70, x)); }
-  onTarget() { this.sfx.target(); vib(15, this.haptics); this.pulse = 1; const p = PALETTE[this.game.target]; this.extras.coach('switch', `New colour: ${p.glyph} ${p.name}`, { ms: 2200 }); this.fx.pop(`NOW ${p.glyph} ${p.name}`, CONFIG.WORLD_W / 2, 300, { size: 26, color: `hsl(${p.h} 90% 80%)`, life: 1.3, rise: 20 }); }
+  onTarget() { this.sfx.target(); vib(15, this.haptics); this.pulse = 1; const p = PALETTE[this.game.target]; this.extras.coach('switch', `New colour: ${p.glyph} ${p.name}`, { ms: 2200 }); this.fx.pop(`NOW ${p.glyph} ${p.name}`, CONFIG.WORLD_W / 2, 300, { slot: 'banner', size: 26, color: `hsl(${p.h} 90% 80%)`, life: 1.3, rise: 20 }); }
   bump() { const el = this.ui.score; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
   loseDot() { const el = this.ui.lives; el.classList.remove('lose'); void el.offsetWidth; el.classList.add('lose'); }
   onOver(e) {

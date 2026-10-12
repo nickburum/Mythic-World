@@ -127,7 +127,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  drawClouds(cam, time, night) {
+  drawClouds(cam, time, night, onTitle = false) {
     const { ctx, w, h } = this;
     const alpha = 1 - night;
     if (alpha <= 0.02) return;
@@ -135,6 +135,7 @@ export class Renderer {
     for (const c of this.clouds) {
       const [, py] = this.project(0, c.y, 0, cam);
       if (py < -80 || py > h + 80) continue;
+      if (onTitle && py > h * 0.08 && py < h * 0.32) continue;   // keep the title lockup clear
       const drift = ((time * c.speed * cam.K + c.seed * 37) % (w + 300)) - 150;
       const px = ((w / 2 + c.off * cam.K + drift) % (w + 300) + (w + 300)) % (w + 300) - 150;
       const r = cam.K * 0.42 * c.scale;
@@ -149,10 +150,10 @@ export class Renderer {
         ctx.moveTo(px + ox + rr, py + oy);
         ctx.arc(px + ox, py + oy, rr, 0, Math.PI * 2);
       }
-      // flat underside
+      // soft rounded underside (no hard straight cut)
       const half = r * c.puffs * 0.45;
-      ctx.moveTo(px - half, py);
-      ctx.rect(px - half, py, half * 2, r * 0.45);
+      ctx.moveTo(px + half, py + r * 0.1);
+      ctx.ellipse(px, py + r * 0.1, half, r * 0.35, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();

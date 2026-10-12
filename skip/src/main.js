@@ -33,6 +33,7 @@ const isTouch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse
 class App {
   constructor() {
     this.canvas = $('game');
+    this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.qualityPref = storage.get('quality', 'auto');
     this.quality = this.qualityPref === 'auto' ? (isTouch ? 'medium' : 'high') : this.qualityPref;
     this.renderer = new Renderer(this.canvas, this.quality);
@@ -304,7 +305,7 @@ class App {
     if (seed === undefined && this.daily) seed = this.daily.seed;
     this.game.resetWithSeed(seed === undefined ? newSeed() : seed);
     this.fx.clear(); this.trail.length = 0; this.renderer.follow(0, 0, true);
-    this.setState(STATE.READY); this.usedContinue = false; this.music.setMode('play');
+    this.setState(STATE.READY); this.usedContinue = false; this.awardedDist = 0; this.awardedBest = false; this.music.setMode('play');
     this.lastHud = { d: -1, s: -1 }; this.updateHud(true);
     this.ui.hudTarget.hidden = !this.challenge;
     if (this.challenge) this.ui.hudTarget.textContent = `Beat ${this.challenge.tag} · ${fmt(this.challenge.score)} m`;
@@ -338,8 +339,15 @@ class App {
     this.sfx.skip(s.kind, s.streak);
     if (s.kind === 'perfect') haptics.medium(); else haptics.light();
     const sx = r.sx(s.x);
-    if (s.kind === 'perfect') this.fx.addPop(s.streak > 1 ? `PERFECT ×${s.streak}` : 'PERFECT', sx, r.waterY - 46, { size: 22, color: 'hsl(45 100% 78%)' });
-    else if (s.kind === 'good') this.fx.addPop('GOOD', sx, r.waterY - 42, { size: 18, color: '#dff3ff', life: 0.7 });
+    if (s.kind === 'perfect') {
+      // escalation: a long streak must look like one
+      const k = s.streak, color = k >= 8 ? 'hsl(300 100% 82%)' : k >= 4 ? 'hsl(45 100% 75%)' : 'hsl(45 100% 86%)';
+      this.fx.addPop(k > 1 ? `PERFECT ×${k}` : 'PERFECT', sx, r.waterY - 80, { size: 22 * Math.min(1.6, 1 + 0.08 * (k - 1)), color, slot: 'combo' });
+      if (k >= 8) this.fx.ripple(s.x, 1.6, 2);
+      if (!this.reducedMotion && (k === 5 || k % 10 === 0)) this.fx.shake = k >= 10 ? 7 : 4;
+      if (k >= 4) haptics.medium();
+    }
+    else if (s.kind === 'good') this.fx.addPop('GOOD', sx, r.waterY - 70, { size: 18, color: '#dff3ff', life: 0.7, slot: 'combo' });
     else if (s.kind === 'early') this.fx.addPop('DIP', sx, r.waterY - 42, { size: 16, color: '#bfd3ff', life: 0.6 });
     if (this.game.skips >= 3) this.hint('');
   }
@@ -355,12 +363,14 @@ class App {
     this.end = e;
     if (e.reason === 'pad') this.sfx.pad(); else this.sfx.sink();
     haptics.heavy(); this.hint('');
+    if (e.reason === 'pad') { if (!this.reducedMotion) this.fx.shake = 6; for (let i = 0; i < 14; i++) this.fx.parts.push({ x: e.pad.x + (Math.random() - 0.5) * 0.6, y: 0.05, vx: (Math.random() - 0.5) * 3, vy: 1.5 + Math.random() * 2.5, age: 0, life: 0.7, r: 2 + Math.random() * 2, kind: 'spark', g: 7 }); }
+    const el = this.ui.distance; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
     this.setState(STATE.SUNK);
   }
   onMilestone(m) {
     if (this.demo) return;
     this.sfx.milestone(); haptics.medium();
-    this.fx.addPop(m.name.toUpperCase(), this.renderer.w / 2, this.renderer.h * 0.28, { size: Math.min(30, this.renderer.w / 12), color: 'hsl(45 100% 78%)', life: 1.8, rise: 28 });
+    this.fx.addPop(m.name.toUpperCase(), this.renderer.w / 2, this.renderer.h * 0.2, { slot: 'banner', size: Math.min(30, this.renderer.w / 12), color: 'hsl(45 100% 78%)', life: 1.8, rise: 28 });
   }
 
   showResults() {
@@ -387,7 +397,10 @@ class App {
     this.resultsShown = true;
     this.music.setMode('over'); this.refreshContinue();
     const daily = this.daily && !this.challenge && this.game.seed === this.daily.seed ? this.daily : null;
-    const award = awardRun('skip', { distance: e.distance, isBest, daily, stats: { distance: e.distance, perfects: e.perfects, motes: e.motes } });
+    // a continued run is credited once: only the distance gained since the last sink
+    const cont = this.usedContinue, dd = cont ? Math.max(0, e.distance - (this.awardedDist || 0)) : e.distance;
+    const award = awardRun('skip', { distance: dd, isBest: isBest && !(cont && this.awardedBest), daily, stats: cont ? { distance: dd } : { distance: e.distance, perfects: e.perfects, motes: e.motes }, continued: cont });
+    this.awardedDist = e.distance; this.awardedBest = this.awardedBest || isBest;
     this.xpEl?.remove(); this.xpEl = xpBlock(award); this.ui.over.querySelector('.panel').insertBefore(this.xpEl, $('retry'));
     try { window.parent !== window && window.parent.postMessage({ type: 'gamebox:progress' }, '*'); } catch {}
     if (isBest && e.distance >= 1) this.sfx.milestone(); else this.music.stingOver();
@@ -430,6 +443,9 @@ class App {
 
     r.follow(g.stone.x, dt);
     this.fx.update(dt);
+    // screen shake and the sink's camera dip, applied to the canvas (no renderer changes needed)
+    const sh = this.fx.shake, dp = this.fx.dip > 0 ? Math.sin((0.2 - this.fx.dip) / 0.2 * Math.PI) * 6 : 0;
+    this.canvas.style.transform = sh > 0 || dp ? `translate(${((Math.random() - 0.5) * sh).toFixed(1)}px, ${((Math.random() - 0.5) * sh + dp).toFixed(1)}px)` : '';
     // on the title the sun drifts slowly with time so the scene is never static
     const phaseOverride = this.demo ? (Math.sin(this.time * 0.05) * 0.5 + 0.5) * 0.9 : undefined;
     const S = r.draw(g, this.time, this.fx, this.trail.length ? this.trail : null, { showCharge: this.state === STATE.READY, dt, phaseOverride });

@@ -15,7 +15,8 @@
  * show the tracking prompt). The answer is stored as a band, never the year.
  */
 const bridge = () => (typeof window !== 'undefined' && window.webkit?.messageHandlers?.ads) || null;
-export const ageBandFor = (birthYear, now = new Date()) => { const age = now.getFullYear() - birthYear; return age < 13 ? 'child' : age < 16 ? 'teen' : 'adult'; };
+// Only the birth year is asked, so `age` may be one too high (birthday not yet reached): round toward the safer band.
+export const ageBandFor = (birthYear, now = new Date()) => { const age = now.getFullYear() - birthYear; return age <= 13 ? 'child' : age <= 16 ? 'teen' : 'adult'; };
 const AGE_KEY = 'gamebox.ageBand';
 const readBand = () => { try { const v = JSON.parse(localStorage.getItem(AGE_KEY)); return ['child', 'teen', 'adult'].includes(v) ? v : null; } catch { return null; } };
 const adFree = () => { try { return JSON.parse(localStorage.getItem('gamebox.adfree')) === true; } catch { return false; } };

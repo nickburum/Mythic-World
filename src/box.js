@@ -185,7 +185,10 @@ class Box {
   /** Native callbacks land in this (main) frame; forward them to the running game, and own Game Center for the box. */
   setupNative() {
     const fwd = (obj, fn) => (...args) => { try { const w = this.ui.frame.contentWindow; if (w && w[obj] && w[obj][fn]) w[obj][fn](...args); } catch {} };
-    window.AdsBridge = { onReady: fwd('AdsBridge', 'onReady'), onResult: fwd('AdsBridge', 'onResult') };
+    window.AdsBridge = { onReady: fwd('AdsBridge', 'onReady'), onResult: fwd('AdsBridge', 'onResult'),
+      // EEA/UK: Google's consent requires a way to change it later
+      onPrivacy: (required) => { $('privacy-wrap').hidden = !required; } };
+    $('privacy-choices').addEventListener('click', () => { try { window.webkit.messageHandlers.ads.postMessage({ type: 'privacyOptions' }); } catch {} });
     window.GameCenterBridge = {
       onAuth: (e) => { this.gc = e; fwd('GameCenterBridge', 'onAuth')(e); },
       onSubmitted: fwd('GameCenterBridge', 'onSubmitted'),

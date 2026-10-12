@@ -183,9 +183,9 @@ class App {
     if (!reduced && (k === 5 || k % 10 === 0)) this.fx.addShake(k >= 10 ? 7 : 4);
     if (k >= 2) {
       const color = k >= 10 ? 'hsl(300 100% 84%)' : k >= 5 ? 'hsl(45 100% 76%)' : '#fff';
-      this.fx.addPop(`×${k}`, px, py - 40, { size: 26 + Math.min(k, 10) * 1.6, color });
+      this.fx.addPop(`×${k}`, px, py - 40, { size: 26 + Math.min(k, 10) * 1.6, color, slot: 'combo' });
     } else {
-      this.fx.addPop('PERFECT', px, py - 40, { size: 24, color: '#fff' });
+      this.fx.addPop('PERFECT', px, py - 40, { size: 24, color: '#fff', slot: 'combo' });
     }
     if (r.grew) {
       this.sfx.grow();
@@ -212,7 +212,7 @@ class App {
   onMilestone(m) {
     this.sfx.milestone();
     haptics.medium();
-    this.fx.addPop(m.name.toUpperCase(), this.renderer.w / 2, this.renderer.h * 0.3, {
+    this.fx.addPop(m.name.toUpperCase(), this.renderer.w / 2, this.renderer.h * 0.2, { slot: 'banner',
       size: Math.min(34, this.renderer.w / 11), color: 'hsl(45 100% 75%)', life: 1.8, rise: 30, weight: 900,
     });
     const [px, py] = this.renderer.project(0, this.game.towerHeight(), 0, this.cam);
@@ -277,7 +277,7 @@ class App {
     const heightStones = g.blocks.length - 1;
     const sky = r.drawSky(heightStones);
     r.drawStars(sky.night, this.cam, this.time);
-    r.drawClouds(this.cam, this.time, sky.night);
+    r.drawClouds(this.cam, this.time, sky.night, this.state === STATE.TITLE);
     r.drawTower(g, this.cam, this.seedHue);
     this.fx.drawWorld(this.cam);
     if (this.state === STATE.PLAYING) r.drawMoving(g, this.cam, this.seedHue);

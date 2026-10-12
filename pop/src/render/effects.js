@@ -12,7 +12,11 @@ export class Effects {
   shower(x, y, n, hues, spread = 220, up = 420) {
     for (let i = 0; i < n; i++) this.confetti.push({ x, y, vx: (Math.random() * 2 - 1) * spread, vy: -up * (0.5 + Math.random() * 0.6), rot: Math.random() * TAU, vr: (Math.random() * 2 - 1) * 12, age: 0, life: 1.2 + Math.random() * 0.5, w: 6, h: 10, hue: hues[i % hues.length] });
   }
-  pop(text, x, y, opts = {}) { this.pops.push({ text, x, y, age: 0, life: opts.life ?? 0.8, size: opts.size ?? 24, color: opts.color ?? '#fff', rise: opts.rise ?? 50 }); }
+  pop(text, x, y, opts = {}) {
+    if (opts.slot) for (const q of this.pops) if (q.slot === opts.slot) q.life = Math.min(q.life, q.age + 0.08);
+    // keep every pop inside the stage (world 390 wide) and clear of the HUD
+    x = Math.max(70, Math.min(320, x)); y = Math.max(140, y);
+    this.pops.push({ slot: opts.slot, text, x, y, age: 0, life: opts.life ?? 0.8, size: opts.size ?? 24, color: opts.color ?? '#fff', rise: opts.rise ?? 50 }); }
   update(dt) {
     for (const p of this.parts) { p.age += dt; p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
     this.parts = this.parts.filter(p => p.age < p.life);

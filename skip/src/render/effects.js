@@ -5,8 +5,8 @@
 const TAU = Math.PI * 2;
 
 export class Effects {
-  constructor() { this.ripples = []; this.parts = []; this.pops = []; }
-  clear() { this.ripples.length = 0; this.parts.length = 0; this.pops.length = 0; }
+  constructor() { this.ripples = []; this.parts = []; this.pops = []; this.shake = 0; this.dip = 0; }
+  clear() { this.ripples.length = 0; this.parts.length = 0; this.pops.length = 0; this.shake = 0; this.dip = 0; }
 
   ripple(x, strength = 1, count = 3) {
     for (let i = 0; i < count; i++) this.ripples.push({ x, age: -i * 0.12, life: 1.1 + strength * 0.4, strength });
@@ -26,14 +26,17 @@ export class Effects {
     for (let i = 0; i < 18; i++) { const a = Math.random() * TAU, sp = 1 + Math.random() * 2.5; this.parts.push({ x, y: 0.05, vx: Math.cos(a) * sp, vy: Math.abs(Math.sin(a)) * sp + 1, age: 0, life: 0.7 + Math.random() * 0.3, r: 1.5 + Math.random() * 2, kind: 'spark', g: 2 }); }
   }
   sink(x) {
-    this.ripple(x, 1.4, 4);
-    for (let i = 0; i < 8; i++) this.parts.push({ x: x + (Math.random() - 0.5) * 0.3, y: -0.05, vx: 0, vy: 0.4 + Math.random() * 0.5, age: -i * 0.08, life: 0.9, r: 1.5 + Math.random() * 2, kind: 'bubble', g: 0 });
+    this.ripple(x, 2.2, 4); this.dip = 0.2;
+    for (let i = 0; i < 24; i++) this.parts.push({ x: x + (Math.random() - 0.5) * 0.5, y: -0.05, vx: 0, vy: 0.4 + Math.random() * 0.5, age: -i * 0.03, life: 0.9, r: 1.5 + Math.random() * 2, kind: 'bubble', g: 0 });
   }
   addPop(text, sx, sy, opts = {}) {
-    this.pops.push({ text, x: sx, y: sy, age: 0, life: opts.life ?? 0.9, size: opts.size ?? 24, color: opts.color ?? '#fff', rise: opts.rise ?? 40, weight: opts.weight ?? 900 });
+    // one pop per slot: a new banner or combo line retires the previous one instead of printing over it
+    if (opts.slot) for (const q of this.pops) if (q.slot === opts.slot) q.life = Math.min(q.life, q.age + 0.08);
+    this.pops.push({ text, x: sx, y: sy, age: 0, life: opts.life ?? 0.9, size: opts.size ?? 24, color: opts.color ?? '#fff', rise: opts.rise ?? 40, weight: opts.weight ?? 900, slot: opts.slot });
   }
 
   update(dt) {
+    this.shake = Math.max(0, this.shake - dt * 40); this.dip = Math.max(0, this.dip - dt);
     for (const r of this.ripples) r.age += dt;
     this.ripples = this.ripples.filter(r => r.age < r.life);
     for (const p of this.parts) {

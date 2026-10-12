@@ -162,12 +162,15 @@ export function attachExtras(o) {
     music, pause, get paused() { return pause.paused; }, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share, coach, coachDone,
     unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); } },
     onTitle() { music.setMode('title'); if (coachKey) { coachEl.hidden = true; coachKey = null; } },
-    onStart(seed) { state.usedContinue = false; if (seed === undefined) { state.challenge = null; if (state.daily) state.daily.active = false; } cont.hidden = true; versus.hidden = true; music.setMode('play'); },
+    onStart(seed) { state.usedContinue = false; state.awardedScore = 0; state.awardedBest = false; if (seed === undefined) { state.challenge = null; if (state.daily) state.daily.active = false; } cont.hidden = true; versus.hidden = true; music.setMode('play'); },
     onOver(score, info = {}) {
       state.lastScore = score; music.setMode('over'); if (coachKey) { coachEl.hidden = true; coachKey = null; }
       if (info.isBest && score > 0) { if (o.sfx && o.sfx.newBest) o.sfx.newBest(); else music.stingBest(); } else music.stingOver();
       // progress: XP for every run, the daily streak, and how close this run came
-      const award = awardRun(o.id, { score, isBest: !!info.isBest, daily: state.daily && state.daily.active ? state.daily : null, stats: info.stats || {} });
+      // a continued run is credited once: only what was gained since the last game over
+      const cont = state.usedContinue, delta = cont ? Math.max(0, score - (state.awardedScore || 0)) : score;
+      const award = awardRun(o.id, { score: delta, isBest: !!info.isBest && !(cont && state.awardedBest), daily: state.daily && state.daily.active ? state.daily : null, stats: cont ? {} : info.stats || {}, continued: cont });
+      state.awardedScore = score; state.awardedBest = state.awardedBest || !!info.isBest;
       progress.querySelector('.close-line').textContent = info.isBest ? '' : closeLine(score, info.best, o.unit);
       progress.querySelector('.xp-block')?.remove(); progress.appendChild(xpBlock(award));
       try { window.parent !== window && window.parent.postMessage({ type: 'gamebox:progress' }, '*'); } catch {}
