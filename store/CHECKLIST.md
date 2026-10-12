@@ -30,6 +30,8 @@ Tick top to bottom. Each line names where you do it. The code side is done; the 
 - [ ] Product ▸ Archive ▸ Distribute ▸ App Store Connect ▸ Upload.
 - [ ] Internal testers added; build installed on a real phone.
 - [ ] Smoke on device: every game plays; sound mixes with your music; on the 4th run the age question appears once, then Continue shows a test ad; Go ad-free in sandbox removes the ad (Restore brings it back after reinstall); Control Center pauses a run; delete + reinstall restores scores and streak; a challenge link opens the web version; today's run from the hub's Today card.
+- [ ] Zoom check: a stray pinch or double tap on a game's title, result sheet or pause screen never leaves the game zoomed (the hub allows zoom for accessibility; the WKWebView scroll view is locked).
+- [ ] Consent: in an EU/UK region (Settings ▸ General ▸ Language & Region, or a VPN) Google's consent form appears before the first ad, and Settings shows **Privacy choices** afterwards.
 
 ## F. Submit
 - [ ] Review notes pasted (`store/METADATA.md`).

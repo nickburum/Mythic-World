@@ -1,6 +1,6 @@
 # Game Box — launch hand-off
 
-The code, art, store assets and docs for v1.0 are done and reviewed. What is left needs your Apple and Google accounts and one real iPhone. This page is the short version; `store/CHECKLIST.md` is the tick-list and `ios/APPLE-SETUP.md` the click-by-click guide.
+The code, art, store assets and docs for v1.0 are done and reviewed: **the 13-seat review board voted SHIP, 12 of 12 reviewers plus the producer** (`docs/review/producer-final.md`). What is left needs your Apple and Google accounts and one real iPhone. This page is the short version; `store/CHECKLIST.md` is the tick-list and `ios/APPLE-SETUP.md` the click-by-click guide.
 
 ## Where things are
 
@@ -30,4 +30,4 @@ Five one-tap games in one free app: POP (chain pops, frenzy), Sky Temple (stacki
 
 ## Deferred to v1.1 (board-agreed)
 
-Character art for Sky Temple and SKIP; Sky Temple offering stones; universal links (Associated Domains); a fixed-step SKIP simulation and a second RNG stream in ORBIT for perfectly identical challenge replays; Dynamic Type sizing; scale-aware stings and a higher POP lead line; store frames rendered on a Mac (SF Rounded).
+The producer's ranked v1.1 backlog is in `docs/review/producer-final.md`. In short: character art for Sky Temple and SKIP; Sky Temple offering stones; universal links (Associated Domains); a fixed-step SKIP simulation and a second RNG stream in ORBIT for perfectly identical challenge replays; Dynamic Type sizing; scale-aware stings and a higher POP lead line; store frames rendered on a Mac (SF Rounded).
