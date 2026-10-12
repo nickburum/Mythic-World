@@ -358,7 +358,7 @@ class App {
     this.fx.moteBurst(e.x);
     if (this.demo) return;
     this.sfx.mote(); haptics.medium();
-    this.fx.addPop('+SPEED', this.renderer.sx(e.x), this.renderer.waterY - 125, { size: 18, color: '#fff2b0', life: 0.8, slot: 'aux' });
+    this.fx.addPop('+SPEED', this.renderer.sx(e.x), this.renderer.waterY - 150, { size: 18, color: '#fff2b0', life: 0.8, slot: 'aux' });
   }
   onSink(e) {
     if (e.reason === 'pad') this.fx.ripple(e.pad.x, 0.5, 2); else this.fx.sink(this.game.stone.x);

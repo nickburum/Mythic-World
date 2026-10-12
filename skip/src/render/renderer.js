@@ -313,7 +313,7 @@ export class Renderer {
       let rw = p.w / 2 * this.ppm, rh = rw * 0.32;
       const y = this.waterY + 2 + Math.sin(time * 1.3 + p.seed * 9) * 1.5;
       if (p.hitT) {   // the stone landed here: squash (120 ms), then spring back with a little overshoot (240 ms)
-        const t = (performance.now() - p.hitT) / 1000, f = t < 0.12 ? t / 0.12 : t < 0.36 ? Math.cos((t - 0.12) / 0.24 * Math.PI) * (1 - (t - 0.12) / 0.24 * 0.6) : 0;
+        const t = (performance.now() - p.hitT) / 1000, f = t < 0.03 ? t / 0.03 : t < 0.12 ? 1 : Math.cos((t - 0.12) / 0.24 * Math.PI) * Math.exp(-(t - 0.12) * 7);
         rw *= 1 + 0.25 * f; rh *= 1 - 0.25 * f;
       }
       this.castShadow(K, x, this.waterY - 6, rw * 0.9, 0.25);

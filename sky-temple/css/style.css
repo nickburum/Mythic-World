@@ -87,4 +87,5 @@ html, body { background: #2a6fb8; }
 /* the shared translucent sheet turns grey over the bright sky: use a solid night panel here */
 :root { --surface: rgba(12,20,44,.86); }
 /* a soft dark halo behind the title lockup: legible over any sky or cloud */
-#title .title-block { background: radial-gradient(closest-side, rgba(11,16,32,.28), rgba(11,16,32,0)); padding: 18px 32px; border-radius: 48px; }
+#title .title-block { position: relative; isolation: isolate; }
+#title .title-block::before { content: ""; position: absolute; inset: -18px -32px; z-index: -1; background: radial-gradient(closest-side, rgba(11,16,32,.28), rgba(11,16,32,0)); pointer-events: none; }   /* halo without changing layout */
