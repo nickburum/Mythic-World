@@ -135,7 +135,7 @@ export class Renderer {
     for (const c of this.clouds) {
       const [, py] = this.project(0, c.y, 0, cam);
       if (py < -80 || py > h + 80) continue;
-      if (onTitle && py > h * 0.08 && py < h * 0.32) continue;   // keep the title lockup clear
+      if (onTitle && py > h * 0.06 && py < h * 0.5) continue;   // keep the title lockup (logo + tagline) clear
       const drift = ((time * c.speed * cam.K + c.seed * 37) % (w + 300)) - 150;
       const px = ((w / 2 + c.off * cam.K + drift) % (w + 300) + (w + 300)) % (w + 300) - 150;
       const r = cam.K * 0.42 * c.scale;

@@ -351,14 +351,14 @@ class App {
       if (k >= 4) haptics.medium();
     }
     else if (s.kind === 'good') this.fx.addPop('GOOD', sx, r.waterY - 70, { size: 18, color: '#dff3ff', life: 0.7, slot: 'combo' });
-    else if (s.kind === 'early') this.fx.addPop('DIP', sx, r.waterY - 42, { size: 16, color: '#bfd3ff', life: 0.6 });
+    else if (s.kind === 'early') this.fx.addPop('DIP', sx, r.waterY - 70, { size: 16, color: '#bfd3ff', life: 0.6, slot: 'combo' });
     if (this.game.skips >= 3) this.hint('');
   }
   onMote(e) {
     this.fx.moteBurst(e.x);
     if (this.demo) return;
     this.sfx.mote(); haptics.medium();
-    this.fx.addPop('+SPEED', this.renderer.sx(e.x), this.renderer.waterY - 70, { size: 18, color: '#fff2b0', life: 0.8 });
+    this.fx.addPop('+SPEED', this.renderer.sx(e.x), this.renderer.waterY - 125, { size: 18, color: '#fff2b0', life: 0.8, slot: 'aux' });
   }
   onSink(e) {
     if (e.reason === 'pad') this.fx.ripple(e.pad.x, 0.5, 2); else this.fx.sink(this.game.stone.x);
@@ -366,7 +366,8 @@ class App {
     this.end = e;
     if (e.reason === 'pad') this.sfx.pad(); else this.sfx.sink();
     haptics.heavy(); this.hint('');
-    if (e.reason === 'pad') { if (!this.reducedMotion) this.fx.shake = 6; for (let i = 0; i < 14; i++) this.fx.parts.push({ x: e.pad.x + (Math.random() - 0.5) * 0.6, y: 0.05, vx: (Math.random() - 0.5) * 3, vy: 1.5 + Math.random() * 2.5, age: 0, life: 0.7, r: 2 + Math.random() * 2, kind: 'spark', g: 7 }); }
+    this.game.sinkT = performance.now();
+    if (e.reason === 'pad') { e.pad.hitT = performance.now(); if (!this.reducedMotion) this.fx.shake = 6; for (let i = 0; i < 14; i++) this.fx.parts.push({ x: e.pad.x + (Math.random() - 0.5) * 0.6, y: 0.05, vx: (Math.random() - 0.5) * 3, vy: 1.5 + Math.random() * 2.5, age: 0, life: 0.7, r: 2 + Math.random() * 2, kind: 'leaf', g: 7 }); }
     const el = this.ui.distance; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
     this.setState(STATE.SUNK);
   }

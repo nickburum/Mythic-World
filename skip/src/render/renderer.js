@@ -310,8 +310,12 @@ export class Renderer {
     const { ctx } = this;
     for (const p of game.pads) {
       const x = this.sx(p.x); if (x < -80 || x > this.w + 80) continue;
-      const rw = p.w / 2 * this.ppm, rh = rw * 0.32;
+      let rw = p.w / 2 * this.ppm, rh = rw * 0.32;
       const y = this.waterY + 2 + Math.sin(time * 1.3 + p.seed * 9) * 1.5;
+      if (p.hitT) {   // the stone landed here: squash (120 ms), then spring back with a little overshoot (240 ms)
+        const t = (performance.now() - p.hitT) / 1000, f = t < 0.12 ? t / 0.12 : t < 0.36 ? Math.cos((t - 0.12) / 0.24 * Math.PI) * (1 - (t - 0.12) / 0.24 * 0.6) : 0;
+        rw *= 1 + 0.25 * f; rh *= 1 - 0.25 * f;
+      }
       this.castShadow(K, x, this.waterY - 6, rw * 0.9, 0.25);
       ctx.fillStyle = PAD.dark; ctx.beginPath(); ctx.ellipse(x, y + 2, rw, rh, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = PAD.fill; ctx.beginPath(); ctx.ellipse(x, y, rw, rh, 0, 0, TAU); ctx.fill();
@@ -328,8 +332,11 @@ export class Renderer {
   drawStone(game, K, trail) {
     const { ctx } = this;
     const s = game.stone;
-    const x = this.sx(s.x), y = this.sy(Math.max(0, s.y));
+    const x = this.sx(s.x); let y = this.sy(Math.max(0, s.y));
     const R = 7 * (this.ppm / 40);
+    // sinking: the stone slips under over 600 ms (down, fading, tipping) instead of vanishing
+    let sinkK = 0;
+    if (game.phase === 'sunk' && game.sinkT && game.endReason !== 'pad') { sinkK = Math.min(1, (performance.now() - game.sinkT) / 600); if (sinkK >= 1) return; y += 40 * (this.ppm / 40) * sinkK; }
     if (trail && trail.length > 1) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       for (let i = 1; i < trail.length; i++) {
@@ -340,14 +347,14 @@ export class Renderer {
       ctx.restore();
     }
     // cast shadow (follows the light) and mirror reflection (the timing cue)
-    this.castShadow(K, x, y, R * 1.2, 0.45);
-    if (s.y >= 0) {
+    if (!sinkK) this.castShadow(K, x, y, R * 1.2, 0.45);
+    if (s.y >= 0 && !sinkK) {
       const ry = this.waterY + (this.waterY - y) * 0.85 + 2;
       ctx.save(); ctx.globalAlpha = 0.45; ctx.translate(x, ry); ctx.rotate(-s.spin * 0.5); ctx.scale(1, 0.6);
       ctx.fillStyle = STONE.dark; ctx.beginPath(); ctx.ellipse(0, 0, R * 1.2, R * 0.75, 0, 0, TAU); ctx.fill();
       ctx.restore();
     }
-    ctx.save(); ctx.translate(x, y); ctx.rotate(s.spin * 0.5);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(s.spin * 0.5 + sinkK * 0.6); if (sinkK) ctx.globalAlpha = 1 - sinkK;
     ctx.fillStyle = STONE.dark; ctx.beginPath(); ctx.ellipse(1.5, 2, R * 1.25, R * 0.8, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = STONE.mid; ctx.beginPath(); ctx.ellipse(0, 0, R * 1.25, R * 0.8, 0, 0, TAU); ctx.fill();
     // highlight on the side that faces the light

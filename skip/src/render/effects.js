@@ -72,6 +72,7 @@ export class Effects {
       const t = p.age / p.life;
       const x = r.sx(p.x), y = p.kind === 'bubble' ? r.waterY - p.y * r.ppm * 2 : r.sy(p.y);
       if (p.kind === 'spark') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,236,170,${(1 - t).toFixed(3)})`; }
+      else if (p.kind === 'leaf') { ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(155,229,138,${(1 - t).toFixed(3)})`; }
       else if (p.kind === 'bubble') { ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(255,255,255,${((1 - t) * 0.5).toFixed(3)})`; }
       else { ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(230,245,255,${((1 - t) * 0.9).toFixed(3)})`; }
       ctx.beginPath(); ctx.arc(x, y, p.r * (r.ppm / 40), 0, TAU); ctx.fill();
