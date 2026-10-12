@@ -120,7 +120,7 @@ class App {
   }
 
   click() { this.unlockAudio(); this.sfx.tap(); }
-  unlockAudio() { this.sfx.unlock(); if (this.sfx.ctx) { this.music.attach(this.sfx.ctx); this.music.start(); } }
+  unlockAudio() { this.sfx.unlock(); if (this.sfx.ctx) { this.music.attach(this.sfx.ctx); this.music.start(); let other = false; try { other = !!(window.__gameBoxNative?.otherAudio || window.parent?.__gameBoxNative?.otherAudio); } catch {} if (other) this.music.setMuted(true); } }
   toast(text, ms = 2200) { const t = this.ui.toast; t.textContent = text; t.hidden = false; clearTimeout(this.toastT); this.toastT = setTimeout(() => { t.hidden = true; }, ms); }
   saveTag(v) { this.tag = cleanTag(v); storage.set(KEYS.NAME, this.tag); this.ui.tagInput.value = this.ui.tagInput2.value = this.tag === 'YOU' ? '' : this.tag; this.refreshHiscore(); }
   refreshHiscore() { const top = this.board.local.top(1)[0]; this.ui.best.textContent = fmt(top ? top.score : 0); this.ui.bestTag.textContent = top ? (top.tag || this.tag) : this.tag; }

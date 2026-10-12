@@ -41,3 +41,6 @@ html, body { background: #1b2a44; }
   .logo { font-size: 96px; }
   .score { margin-top: 1vh; font-size: 64px; }
 }
+
+/* in the box, keep the logo off the cavern's ceiling rail */
+.in-box #title .title-block { margin-top: calc(var(--safe-top) + 160px); }

@@ -76,6 +76,8 @@ export class Renderer {
       g.addColorStop(0, sky.top); g.addColorStop(1, sky.bottom); c.fillStyle = g; c.fillRect(0, 0, W, H);
       const rg = c.createRadialGradient(W * 0.35, H * 0.5, 1, W * 0.35, H * 0.5, Math.max(W, H) * 0.6);
       rg.addColorStop(0, sky.glow); rg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = rg; c.fillRect(0, 0, W, H);
+      // the vignette is baked in here, so a frame pays for one full-screen blit, not two
+      const vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.85); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.3)'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
       if (this.skyCache.size > 48) this.skyCache.clear();
       this.skyCache.set(key, cv);
     }

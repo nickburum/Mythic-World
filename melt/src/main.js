@@ -245,7 +245,6 @@ class App {
     this.fx.drawWorld();
     if (this.state !== STATE.TITLE) r.drawGauge(g.phase, this.time);
     r.end();
-    r.drawVignette();
     this.fx.drawScreen();
   }
 

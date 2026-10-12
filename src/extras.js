@@ -33,6 +33,9 @@ const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === n
 const fmt = (n, unit) => (unit === ' m' ? (Math.round(n * 10) / 10).toFixed(1) : String(Math.round(n))) + unit;
 const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 
+/** The iOS shell reports whether the player's own music/podcast is playing; then the box keeps quiet (SFX only). */
+const otherAudio = () => { try { return !!(window.__gameBoxNative?.otherAudio || window.parent?.__gameBoxNative?.otherAudio); } catch { return false; } };
+
 export function attachExtras(o) {
   const over = document.querySelector(o.over), title = document.querySelector(o.title), retry = document.querySelector(o.retry);
   const panel = over.querySelector('.panel') || over;
@@ -160,7 +163,7 @@ export function attachExtras(o) {
   /* ─── lifecycle hooks the game calls ─── */
   const api = {
     music, pause, get paused() { return pause.paused; }, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share, coach, coachDone,
-    unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); } },
+    unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); if (otherAudio()) music.setMuted(true); } },
     onTitle() { music.setMode('title'); if (coachKey) { coachEl.hidden = true; coachKey = null; } },
     onStart(seed) { state.usedContinue = false; state.awardedScore = 0; state.awardedBest = false; if (seed === undefined) { state.challenge = null; if (state.daily) state.daily.active = false; } cont.hidden = true; versus.hidden = true; music.setMode('play'); },
     onOver(score, info = {}) {

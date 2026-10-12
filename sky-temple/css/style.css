@@ -83,3 +83,6 @@ html, body { background: #2a6fb8; }
   .title-block { margin-top: 2vh; }
   .score { margin-top: 2vh; font-size: 72px; }
 }
+
+/* the shared translucent sheet turns grey over the bright sky: use a solid night panel here */
+:root { --surface: rgba(12,20,44,.86); }

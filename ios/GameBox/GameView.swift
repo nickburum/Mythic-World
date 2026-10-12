@@ -65,6 +65,13 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
 
         GameView.pendingDeepLink.sink { [weak self] url in if let url = url { self?.handle(deepLink: url) } }.store(in: &links)
         // Control Center, a call banner, the app switcher: the page is not hidden, so tell it to pause the run.
+        // the player's own audio can start or stop while we are away: refresh the flag the page reads
+        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+            .sink { [weak self] _ in
+                let other = AVAudioSession.sharedInstance().isOtherAudioPlaying ? "true" : "false"
+                self?.webView.evaluateJavaScript("window.__gameBoxNative && (window.__gameBoxNative.otherAudio = \(other));", completionHandler: nil)
+            }
+            .store(in: &links)
         NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)
             .sink { [weak self] _ in self?.webView.evaluateJavaScript("window.__box && window.__box.pauseGame();", completionHandler: nil) }
             .store(in: &links)
