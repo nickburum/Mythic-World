@@ -41,7 +41,9 @@ export const CONFIG = Object.freeze({
   HAZARD_RECOVERY: 0.6,
   HAZARD_POS: 0.3,
 
-  NEAR_MISS_WINDOW: 0.32,
+  NEAR_MISS_WINDOW: 0.4,
+  HEAT_MAX: 5,              // close calls build heat: each pass scores the heat multiplier
+  EARLY_CHANGE: 0.8,        // a state change this long before an obstacle cools the heat by one
 
   MILESTONES: [
     { score: 10, name: 'Lukewarm' },

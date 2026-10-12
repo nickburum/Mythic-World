@@ -31,7 +31,8 @@
       </button>
     </header>
 
-    <div id="level" class="level-strip" aria-label="Your level"><b id="lv">LV 1</b><div class="lv-bar"><i id="lv-fill"></i></div><small id="lv-xp">0 / 100 XP</small></div>
+    <div id="level" class="level-strip" role="group" aria-label="Your level"><b id="lv">LV 1</b><div class="lv-bar" aria-hidden="true"><i id="lv-fill"></i></div><small id="lv-xp">0 / 100 XP</small></div>
+    <p id="lv-next" class="lv-next"></p>
 
     <section id="today" class="today-card" aria-labelledby="today-title">
       <div class="today-head"><h2 id="today-title" class="section-title">Today</h2><span id="streak" class="streak"></span></div>
@@ -92,8 +93,10 @@
         <button id="privacy-choices" class="btn" type="button">Privacy choices</button>
         <p class="note">Change how ads may use your data.</p>
       </div>
+      <div class="field looks-field"><span>Looks</span><small class="note">Unlocked as you level up</small></div>
+      <div id="looks" class="looks"></div>
       <button id="replay-tutorials" class="btn" type="button">Show tutorials again</button>
-      <button id="reset-scores" class="btn danger" type="button">Reset all scores</button>
+      <button id="reset-scores" class="btn danger" type="button">Reset best scores</button>
       <button class="btn primary" type="button" data-close>Done</button>
     </div>
   </section>

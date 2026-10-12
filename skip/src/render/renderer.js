@@ -362,10 +362,22 @@ export class Renderer {
     if (game.phase !== 'flight') return;
     const ttc = game.timeToContact(); if (!isFinite(ttc)) return;
     const { ctx } = this;
-    const lx = this.sx(game.predictedLandingX());
-    ctx.globalAlpha = Math.min(1, ttc / 0.8) * 0.5;
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 6]);
-    ctx.beginPath(); ctx.ellipse(lx, this.waterY, 12 * (this.ppm / 40), 4 * (this.ppm / 40), 0, 0, TAU); ctx.stroke();
+    const lx = this.sx(game.predictedLandingX()), k = this.ppm / 40, pad = game.landingOnPad();
+    if (pad) {
+      // about to land on a lily pad: a red pulsing marker, and DIP! once an early tap can still save it
+      const pulse = 0.6 + 0.4 * Math.abs(Math.sin(performance.now() / 90));
+      ctx.globalAlpha = pulse; ctx.strokeStyle = '#ff5a6e'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(lx, this.waterY, 16 * k, 5.5 * k, 0, 0, TAU); ctx.stroke();
+      if (ttc <= game.config.EARLY_WINDOW && ttc > game.config.GOOD_WINDOW) {
+        ctx.globalAlpha = 1; ctx.font = `900 ${Math.round(18 * Math.min(1.4, k))}px ui-rounded, -apple-system, "SF Pro Rounded", system-ui, sans-serif`; ctx.textAlign = 'center';
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.strokeText('DIP!', lx, this.waterY - 22 * k); ctx.fillStyle = '#ff8a94'; ctx.fillText('DIP!', lx, this.waterY - 22 * k);
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+    ctx.globalAlpha = Math.min(1, ttc / 0.8) * 0.8;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.setLineDash([4, 6]);
+    ctx.beginPath(); ctx.ellipse(lx, this.waterY, 12 * k, 4 * k, 0, 0, TAU); ctx.stroke();
     ctx.setLineDash([]); ctx.globalAlpha = 1;
   }
 

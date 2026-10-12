@@ -78,12 +78,19 @@ export class SkipGame {
       if (!this.motes.some(m => Math.abs(m.x - x) < c.PAD_WIDTH + c.MOTE_RADIUS)) {
         this.pads.push({ x, w: c.PAD_WIDTH, flower: this.random() < 0.4, seed: this.random() });
       }
-      this.nextPadX += c.PAD_GAP_MIN + this.random() * (c.PAD_GAP_MAX - c.PAD_GAP_MIN);
+      // escalation: pads crowd in with distance (gap 18–34 m at the start → 7–14 m by 400 m) and come in pairs from 500 m
+      const k = Math.max(0, Math.min(1, (x - c.PAD_START) / 345));
+      const gMin = c.PAD_GAP_MIN + (c.PAD_GAP_LATE_MIN - c.PAD_GAP_MIN) * k, gMax = c.PAD_GAP_MAX + (c.PAD_GAP_LATE_MAX - c.PAD_GAP_MAX) * k;
+      if (x > c.PAD_PAIRS_FROM && this.random() < 0.35) { const x2 = x + 3 + this.random() * 2; if (!this.motes.some(m => Math.abs(m.x - x2) < c.PAD_WIDTH + c.MOTE_RADIUS)) this.pads.push({ x: x2, w: c.PAD_WIDTH, flower: false, seed: this.random() }); }
+      this.nextPadX += gMin + this.random() * (gMax - gMin);
     }
     const behind = this.stone.x - 30;
     this.motes = this.motes.filter(m => m.x > behind);
     this.pads = this.pads.filter(p => p.x > behind);
   }
+
+  /** Will the stone land on a lily pad if nothing changes? (drives the red DIP warning) */
+  landingOnPad() { if (this.phase !== 'flight') return false; const x = this.predictedLandingX(); return this.pads.some(p => Math.abs(p.x - x) <= p.w / 2 + 0.2); }
 
   /** Seconds until the stone would hit the water on its current arc (Infinity if rising forever). */
   timeToContact() {

@@ -5,6 +5,7 @@
  * Rules live in core/skip.js; the lake is drawn by render/renderer.js.
  */
 import { SkipGame, autopilot } from './core/skip.js';
+import { CONFIG } from './core/config.js';
 import { newSeed, cleanTag, challengeFromUrl } from './core/challenge.js';
 import { Renderer } from './render/renderer.js';
 import { Effects } from './render/effects.js';
@@ -18,7 +19,8 @@ import { ads } from '../../src/ads.js';
 import { challengeLink } from '../../src/challenge.js';
 import { shareLink } from '../../src/share.js';
 import { attachPause } from '../../src/pause.js';
-import { awardRun, xpBlock, dailyFromHref } from '../../src/progress.js';
+import { awardRun, xpBlock, dailyFromHref, closeLine } from '../../src/progress.js';
+import { applyLook } from '../../src/themes.js';
 import { song, steps } from './extras-config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -32,7 +34,7 @@ const isTouch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse
 
 class App {
   constructor() {
-    this.canvas = $('game');
+    this.canvas = $('game'); applyLook('skip');
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.qualityPref = storage.get('quality', 'auto');
     this.quality = this.qualityPref === 'auto' ? (isTouch ? 'medium' : 'high') : this.qualityPref;
@@ -303,6 +305,7 @@ class App {
     this.demo = false; this.autopilot = false;
     if (seed === undefined) this.challenge = null;
     if (seed === undefined && this.daily) seed = this.daily.seed;
+    this.game.config = { ...this.game.config, PAD_START: this.games < 3 ? 100 : CONFIG.PAD_START };   // first three runs: open water to 100 m
     this.game.resetWithSeed(seed === undefined ? newSeed() : seed);
     this.fx.clear(); this.trail.length = 0; this.renderer.follow(0, 0, true);
     this.setState(STATE.READY); this.usedContinue = false; this.awardedDist = 0; this.awardedBest = false; this.music.setMode('play');
@@ -402,6 +405,8 @@ class App {
     const award = awardRun('skip', { distance: dd, isBest: isBest && !(cont && this.awardedBest), daily, stats: cont ? { distance: dd } : { distance: e.distance, perfects: e.perfects, motes: e.motes }, continued: cont });
     this.awardedDist = e.distance; this.awardedBest = this.awardedBest || isBest;
     this.xpEl?.remove(); this.xpEl = xpBlock(award); this.ui.over.querySelector('.panel').insertBefore(this.xpEl, $('retry'));
+    const best = this.board.best ? this.board.best() : 0, line = isBest ? '' : closeLine(e.distance, best, ' m');
+    this.closeEl?.remove(); if (line) { this.closeEl = document.createElement('div'); this.closeEl.className = 'close-line'; this.closeEl.textContent = line; this.xpEl.before(this.closeEl); }
     try { window.parent !== window && window.parent.postMessage({ type: 'gamebox:progress' }, '*'); } catch {}
     if (isBest && e.distance >= 1) this.sfx.milestone(); else this.music.stingOver();
   }
@@ -443,6 +448,11 @@ class App {
 
     r.follow(g.stone.x, dt);
     this.fx.update(dt);
+    if (this.state === STATE.FLIGHT && !this.demo) {
+      const warn = this.game.landingOnPad() && this.game.timeToContact() <= this.game.config.EARLY_WINDOW + 0.15;
+      if (warn && !this.padWarn) { this.padWarn = true; const n = storage.get('padTips', 0) || 0; if (n < 3) { storage.set('padTips', n + 1); this.hint('LILY PAD AHEAD · TAP EARLY TO DIP'); } }
+      else if (!warn && this.padWarn) { this.padWarn = false; if (/LILY PAD/.test(this.ui.hint.textContent)) this.hint(''); }
+    }
     // screen shake and the sink's camera dip, applied to the canvas (no renderer changes needed)
     const sh = this.fx.shake, dp = this.fx.dip > 0 ? Math.sin((0.2 - this.fx.dip) / 0.2 * Math.PI) * 6 : 0;
     this.canvas.style.transform = sh > 0 || dp ? `translate(${((Math.random() - 0.5) * sh).toFixed(1)}px, ${((Math.random() - 0.5) * sh + dp).toFixed(1)}px)` : '';

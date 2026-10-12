@@ -44,3 +44,6 @@ html, body { background: #1b2a44; }
 
 /* in the box, keep the logo off the cavern's ceiling rail */
 .in-box #title .title-block { margin-top: calc(var(--safe-top) + 160px); }
+
+.heat { margin-top: 6px; min-height: 18px; font-size: 13px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #ffd36b; text-shadow: 0 2px 10px rgba(0,0,0,.4); }
+.heat.hot { color: #ff8a5b; }

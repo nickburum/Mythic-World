@@ -177,3 +177,6 @@ body:not([data-state="title"]) .help-btn { display: none; }
 @media (prefers-reduced-motion: reduce) { .xp-bar i, .level-up { animation: none; } }
 
 .combo:empty { display: none; }
+.xp-next { font-size: 11px; color: var(--ink-3); text-align: center; letter-spacing: .06em; }
+.btn.small.equip { justify-self: center; }
+.banner button[hidden] { display: none; }

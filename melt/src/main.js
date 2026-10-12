@@ -117,6 +117,7 @@ class App {
   }
 
   start(seed) {
+    const h = document.getElementById('heat'); if (h) { h.textContent = ''; h.classList.remove('hot'); }
     seed = seed ?? this.extras.currentSeed();
     this.extras.onStart(seed);
     if (seed !== undefined) this.game.resetWithSeed(seed); else this.game.resetWithSeed(this.extras.newSeed());
@@ -169,6 +170,10 @@ class App {
   onPass(e) {
     this.updateScore(e.score);
     if (!e.closeCall) this.sfx.pass();
+    if (e.score >= 3 && this.games >= 1) this.extras.coach('heat', 'Change at the last moment to build heat', { ms: 3200 });
+    const h = document.getElementById('heat');
+    if (h) { h.textContent = e.heat > 1 ? `🔥 ×${e.heat} heat` : ''; h.classList.toggle('hot', e.heat >= 4); }
+    const el = document.getElementById('score'); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   }
 
   onCloseCall() {
@@ -176,7 +181,8 @@ class App {
     haptics.medium();
     const [x, y] = this.playerPos();
     const [sx, sy] = this.renderer.toScreen(x, y);
-    this.fx.addPop('CLOSE CALL!', sx + 10, sy - 50 * this.renderer.scale, { size: 22, color: 'hsl(45 100% 75%)' });
+    const heat = this.game.heat;
+    this.fx.addPop(heat > 1 ? `CLOSE! ×${heat}` : 'CLOSE CALL!', sx + 10, sy - 50 * this.renderer.scale, { size: 22 + heat * 2, color: heat >= 4 ? 'hsl(20 100% 70%)' : 'hsl(45 100% 75%)' });
   }
 
   onHazard(o) {

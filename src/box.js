@@ -9,6 +9,7 @@ import { shareHere } from './share.js';
 import { haptics } from './haptics.js';
 import { Store } from './store.js';
 import { readProgress } from './progress.js';
+import { looksFor, equipped, equip, applyLook, nextLine, gameName } from './themes.js';
 
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -29,6 +30,7 @@ class Box {
     this.ui.optSound.checked = this.settings.sound; this.ui.optHaptics.checked = this.settings.haptics; this.ui.optQuality.value = this.settings.quality;
     this.render();
     this.bind();
+    applyLook('box');
     this.cloud = new Cloud();
     this.cloud.onChange(() => { this.refreshBests(); this.toast('Scores restored from iCloud'); });
     this.cloud.init();
@@ -48,17 +50,25 @@ class Box {
     const hero = this.heroGame();
     // the grid never reshuffles: every game, fixed order; the hero above is only a shortcut
     this.ui.grid.innerHTML = GAMES.map(g => `
-      <button class="card" type="button" data-id="${g.id}" role="listitem" style="--accent:${g.accent}" aria-label="${g.name}: ${g.tagline}">
+      <div role="listitem" class="card-wrap"><button class="card" type="button" data-id="${g.id}" style="--accent:${g.accent}" aria-label="${g.name}: ${g.tagline}">
         <img src="${g.path}art/icon-192.png" alt="" width="64" height="64" />
         <b>${g.name}</b>
         <small>${g.tagline}</small>
         <div class="meta">${chip(g)}</div>
-      </button>`).join('');
+      </button></div>`).join('');
     this.refreshHero();
     this.refreshProgress();
   }
 
   refreshBests() { this.render(); }
+
+  /** Settings ▸ Looks: one picker per game with something unlocked. */
+  renderLooks() {
+    const wrap = $('looks'); if (!wrap) return;
+    const ids = ['box', ...GAMES.map(g => g.id)].filter(id => looksFor(id).length > 1);
+    wrap.innerHTML = ids.length ? ids.map(id => `<label class="field"><span>${gameName(id)}</span><select class="select" data-look="${id}">${looksFor(id).map(t => `<option value="${t}"${t === equipped(id) ? ' selected' : ''}>${t === 'default' ? 'Original' : t[0].toUpperCase() + t.slice(1)}</option>`).join('')}</select></label>`).join('') : '<p class="note">Reach level 2 for your first look.</p>';
+    for (const sel of wrap.querySelectorAll('select')) sel.addEventListener('change', () => { equip(sel.dataset.look, sel.value); vibrate(6); });
+  }
 
   /** Level strip + Today card (daily run and streak). */
   refreshProgress() {
@@ -66,6 +76,11 @@ class Box {
     $('lv').textContent = `LV ${p.lvl.level}`;
     $('lv-fill').style.width = `${p.lvl.need ? Math.round(100 * p.lvl.into / p.lvl.need) : 100}%`;
     $('lv-xp').textContent = p.lvl.need ? `${p.lvl.into} / ${p.lvl.need} XP` : 'Max level';
+    $('level').setAttribute('aria-label', `Level ${p.lvl.level}, ${p.lvl.into} of ${p.lvl.need} XP`);
+    $('lv-next').textContent = nextLine(p.lvl.level);
+    $('today-play').setAttribute('aria-label', `Play today's ${g.name} run`);
+    $('week').setAttribute('role', 'img'); $('week').setAttribute('aria-label', `${p.week.filter(d => d.played).length} of 7 days played this week`);
+    this.renderLooks();
     $('today-icon').src = `${g.path}art/icon-192.png`;
     $('today-name').textContent = g.name;
     $('today').style.setProperty('--accent', g.accent);
@@ -100,7 +115,7 @@ class Box {
     const save = () => { this.settings = { sound: this.ui.optSound.checked, haptics: this.ui.optHaptics.checked, quality: this.ui.optQuality.value }; LS.set('gamebox.settings', this.settings); haptics.setEnabled(this.settings.haptics); applySettings(this.settings, (k, v) => localStorage.setItem(k, v)); this.syncSound(); vibrate(6); };
     this.syncSound();
     this.ui.optSound.addEventListener('change', save); this.ui.optHaptics.addEventListener('change', save); this.ui.optQuality.addEventListener('change', save);
-    $('replay-tutorials').addEventListener('click', () => { localStorage.removeItem('gamebox.tutorials'); this.toast('Tutorials will show again'); });
+    $('replay-tutorials').addEventListener('click', () => { for (const k of ['gamebox.tutorials', 'gamebox.coach']) localStorage.removeItem(k); this.toast('Tips will show again'); });
     // two taps to reset (window.confirm is a silent no-op inside WKWebView); also forgets the iCloud copy
     const reset = $('reset-scores'); let armed = 0;
     reset.addEventListener('click', () => {

@@ -13,8 +13,8 @@ export const CONFIG = Object.freeze({
 
   /* skipping */
   EARLY_WINDOW: 0.45,       // tapping this long before natural contact dips the stone (shorter hop)
-  PERFECT_WINDOW: 0.14,     // tap within this of contact (before or after) = perfect
-  GOOD_WINDOW: 0.28,        // … = good
+  PERFECT_WINDOW: 0.10,     // tap within this of contact (before or after) = perfect
+  GOOD_WINDOW: 0.20,        // … = good
   LATE_WINDOW: 0.12,        // a tap this soon AFTER contact still counts (humans react, they don't predict)
   RETAIN_BASE: 0.90,        // speed kept on an untapped / poor skip
   RETAIN_PERFECT: 0.97,     // speed kept on a perfect skip
@@ -35,6 +35,8 @@ export const CONFIG = Object.freeze({
   PAD_START: 55,            // lily pads appear after this distance
   PAD_GAP_MIN: 18,
   PAD_GAP_MAX: 34,
+  PAD_GAP_LATE_MIN: 7, PAD_GAP_LATE_MAX: 14,   // reached 345 m after the first pad
+  PAD_PAIRS_FROM: 500,      // pads come in pairs (two dips in a row) beyond this
   PAD_WIDTH: 1.5,
   LOOKAHEAD: 60,            // metres of lake kept populated ahead of the stone
 
@@ -48,5 +50,8 @@ export const CONFIG = Object.freeze({
     { distance: 150, name: 'Into the dusk' },
     { distance: 200, name: 'Under the stars' },
     { distance: 300, name: 'The far shore' },
+    { distance: 550, name: 'Lily maze' },
+    { distance: 800, name: 'Moonlit run' },
+    { distance: 1100, name: 'Legend of the lake' },
   ],
 });

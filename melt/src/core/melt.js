@@ -56,7 +56,7 @@ export class MeltGame {
     this.phase = c.START_PHASE;
     this.altitude = 0;
     this.speed = c.BASE_SPEED;
-    this.distance = 0; this.score = 0; this.closeCalls = 0; this.time = 0;
+    this.distance = 0; this.score = 0; this.closeCalls = 0; this.time = 0; this.heat = 1; this.bestHeat = 1; this.lastPassTime = 0;
     this.lastPhaseChange = -10; this.lastTap = -10; this.queuedTap = false; this.spawned = 0;
     this.over = false; this.deathPhase = null; this.milestoneIdx = 0; this.nextId = 1;
     this.obstacles = []; this.lastObstacle = null; this.prevObstacleType = null; this.pendingType = null;
@@ -168,10 +168,16 @@ export class MeltGame {
       }
       if (overlapping && !OBSTACLES[o.type].pass(this)) { this.die(o); return; }
       if (o.x + o.w < left) {
-        o.passed = true; this.score += 1;
-        const closeCall = this.time - this.lastPhaseChange <= c.NEAR_MISS_WINDOW + (o.w + c.PLAYER_R * 1.4) / this.speed;
+        o.passed = true;
+        const transit = (o.w + c.PLAYER_R * 1.4) / this.speed, sinceChange = this.time - this.lastPhaseChange;
+        const closeCall = sinceChange <= c.NEAR_MISS_WINDOW + transit;
+        // heat: a late, last-moment change builds it; a change made long before the obstacle cools it
+        const changedForThis = this.lastPhaseChange > this.lastPassTime;
+        if (closeCall) { this.heat = Math.min(c.HEAT_MAX ?? 1, this.heat + 1); this.bestHeat = Math.max(this.bestHeat, this.heat); }
+        else if (changedForThis && sinceChange > (c.EARLY_CHANGE ?? Infinity) + transit) this.heat = Math.max(1, this.heat - 1);
+        this.score += this.heat; this.lastPassTime = this.time;
         if (closeCall) { this.closeCalls += 1; this.emit('nearmiss', o); }
-        this.emit('pass', { obstacle: o, score: this.score, closeCall });
+        this.emit('pass', { obstacle: o, score: this.score, closeCall, heat: this.heat });
         this.checkMilestone();
       }
     }

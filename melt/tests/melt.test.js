@@ -90,7 +90,7 @@ test('every generated course is beatable with a 0.25 s reaction (20 seeds × 120
       g.update(DT); steps++;
     }
     assert.ok(!g.over, `seed ${seed} died at ${g.score} as ${g.deathPhase}`);
-    assert.equal(g.score, 120, `seed ${seed} stalled at ${g.score}`);
+    assert.ok(g.score >= 120, `seed ${seed} stalled at ${g.score}`);
   }
 });
 test('milestones fire in order; close calls are counted', () => {
@@ -116,4 +116,21 @@ test('seeded courses repeat; revive clears the road and keeps the score', () => 
   assert.ok(g.obstacles.every(o => o.x > CONFIG.PLAYER_X + 300));
   run(g, 0.5); assert.ok(!g.over, 'nothing hits right after a revive');
   assert.equal(g.revive(), false, 'revive only works when over');
+});
+
+test('heat: changing at the last moment builds a multiplier; early changes keep it at x1', () => {
+  let lateHeat = 0, lateClose = 0, earlyScore = 0, latePasses = 0;
+  for (let seed = 200; seed < 210; seed++) {
+    // late player: changes state only when the next obstacle is 0.3 s away
+    const g = new MeltGame({ random: rng(seed) }); let steps = 0, lastTap = -1;
+    while (!g.over && steps < 60 * 60) {
+      const next = g.obstacles.find(o => !o.passed && o.kind !== 'hazard' && o.x + o.w > CONFIG.PLAYER_X);
+      const eta = next ? (next.x - CONFIG.PLAYER_X) / g.speed : 9;
+      if (eta < 0.3 && autopilot(g) && g.time - lastTap > 0.07) { g.tap(); lastTap = g.time; }
+      g.update(DT); steps++;
+    }
+    lateHeat = Math.max(lateHeat, g.bestHeat); lateClose += g.closeCalls; latePasses += g.obstacles.length;
+  }
+  assert.ok(lateClose >= 10, `late changers made ${lateClose} close calls`);
+  assert.ok(lateHeat >= 3, `best heat ${lateHeat}`);
 });

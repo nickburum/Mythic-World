@@ -115,7 +115,6 @@ body[data-view="game"] .bg { transform: scale(.96); opacity: .7; transition: tra
 @keyframes load-pulse { from { transform: scale(1); } to { transform: scale(1.06); } }
 #frame { transition: opacity .2s; }
 /* every game in a fixed order; a fifth card sits centred under the pairs */
-.grid .card:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: calc(50% - 6px); }
 .chip.new { color: var(--accent, #fff); border-color: color-mix(in srgb, var(--accent, #fff) 50%, transparent); font-weight: 800; letter-spacing: .24em; text-transform: uppercase; }
 .card img, .hero-icon { box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
 .card { border-top: 3px solid color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
@@ -142,3 +141,10 @@ body[data-view="game"] .bg { transform: scale(.96); opacity: .7; transition: tra
 .week i.on { background: #ffd36b; border-color: #ffd36b; }
 .week i.now { box-shadow: 0 0 0 2px rgba(255,211,107,.35); }
 .hero[hidden] { display: none; }
+
+.lv-next { margin: -16px 0 0; text-align: center; font-size: 11px; letter-spacing: .08em; color: var(--ink-3); }
+.lv-next:empty { display: none; }
+.card-wrap { display: contents; }
+.grid .card-wrap:last-child:nth-child(odd) .card { grid-column: 1 / -1; justify-self: center; width: calc(50% - 6px); }
+.looks { display: grid; }
+.looks-field { cursor: default; }

@@ -28,6 +28,7 @@ import { newSeed, cleanTag, challengeLink, challengeFromUrl } from './challenge.
 import { shareLink } from './share.js';
 import { attachPause } from './pause.js';
 import { awardRun, xpBlock, dailyFromHref, closeLine } from './progress.js';
+import { applyLook } from './themes.js';
 
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 const fmt = (n, unit) => (unit === ' m' ? (Math.round(n * 10) / 10).toFixed(1) : String(Math.round(n))) + unit;
@@ -40,6 +41,7 @@ export function attachExtras(o) {
   const over = document.querySelector(o.over), title = document.querySelector(o.title), retry = document.querySelector(o.retry);
   const panel = over.querySelector('.panel') || over;
   const music = new Music(o.song);
+  applyLook(o.id);
   const pause = attachPause({ onChange: (p) => { if (music.master && music.ctx) music.master.gain.setTargetAtTime(p || music.muted ? 0 : music.volume, music.ctx.currentTime, 0.05); } });
   if (o.sfx) o.sfx.onSound = () => music.duck();
   // the hub tells us it is about to close the game: fade the song instead of cutting it
@@ -67,10 +69,11 @@ export function attachExtras(o) {
   function readIncoming() {
     const c = challengeFromUrl(location.href);
     if (!c && state.daily) {   // opened from the hub's Today card
+      // opened from the Today card: every start this visit is today's run, however the player starts it
       banner.querySelector('b').textContent = "Today's run";
       banner.querySelector('small').textContent = 'Same run for everyone today · bonus XP';
-      banner.querySelector('button').textContent = 'Play';
-      banner.hidden = false; state.dailyPending = true;
+      banner.querySelector('button').hidden = true;
+      banner.hidden = false; state.daily.active = true;
       history.replaceState(null, '', location.pathname + location.search);
       return;
     }
@@ -83,7 +86,6 @@ export function attachExtras(o) {
     history.replaceState(null, '', location.pathname + location.search);
   }
   banner.querySelector('button').addEventListener('click', () => {
-    if (state.dailyPending && !state.incoming) { state.dailyPending = false; state.daily.active = true; banner.hidden = true; beforeStart(() => o.start(state.daily.seed)); return; }
     const c = state.incoming; if (!c) return;
     state.challenge = c.reply ? { seed: c.seed, tag: c.reply.tag, score: c.reply.score } : { seed: c.seed, tag: c.tag, score: c.score };
     banner.hidden = true;
@@ -165,7 +167,7 @@ export function attachExtras(o) {
     music, pause, get paused() { return pause.paused; }, challenge: state, toast, beforeStart, showTutorial: () => showTutorial(() => {}, false), share, coach, coachDone,
     unlock() { const ctx = o.audioContext(); if (ctx) { music.attach(ctx); music.start(); if (otherAudio()) music.setMuted(true); } },
     onTitle() { music.setMode('title'); if (coachKey) { coachEl.hidden = true; coachKey = null; } },
-    onStart(seed) { state.usedContinue = false; state.awardedScore = 0; state.awardedBest = false; if (seed === undefined) { state.challenge = null; if (state.daily) state.daily.active = false; } cont.hidden = true; versus.hidden = true; music.setMode('play'); },
+    onStart(seed) { state.usedContinue = false; state.awardedScore = 0; state.awardedBest = false; if (seed === undefined) state.challenge = null; if (state.daily && seed !== state.daily.seed) state.daily.active = false; cont.hidden = true; versus.hidden = true; music.setMode('play'); },
     onOver(score, info = {}) {
       state.lastScore = score; music.setMode('over'); if (coachKey) { coachEl.hidden = true; coachKey = null; }
       if (info.isBest && score > 0) { if (o.sfx && o.sfx.newBest) o.sfx.newBest(); else music.stingBest(); } else music.stingOver();

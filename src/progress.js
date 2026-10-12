@@ -8,6 +8,7 @@
  * { count, best, last, shield }, gamebox.days [date keys].
  */
 import { level, runXp, dailyFor, dateKey, advanceStreak, streakAlive, daysBetween } from './meta.js';
+import { unlocksBetween, equip, nextLine } from './themes.js';
 
 const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 
@@ -39,7 +40,7 @@ export function awardRun(gameId, { score = 0, distance, isBest = false, daily = 
     const saved = LS.get('gamebox.daily', null);
     const first = !(saved && saved.date === daily.date && saved.done);
     const primary = distance !== undefined ? distance : score;
-    if (primary > 0) {
+    if (primary >= 3) {   // a real attempt, not an idle run, keeps the streak
       let st = LS.get('gamebox.streak', null);
       if (first) { st = advanceStreak(st, daily.date); delete st.changed; delete st.shieldSpent; LS.set('gamebox.streak', st); const days = LS.get('gamebox.days', []) || []; if (!days.includes(daily.date)) { days.push(daily.date); LS.set('gamebox.days', days.sort().slice(-90)); } }
       streakCount = (st && st.count) || 1;
@@ -63,8 +64,10 @@ export function xpBlock(award) {
   el.innerHTML = `<div class="xp-top"><b class="xp-gain">+${award.total} XP</b><span class="xp-lv">LV ${L.level}</span></div>
     <div class="xp-bar" role="progressbar" aria-label="Level ${L.level} progress" aria-valuemin="0" aria-valuemax="${L.need}" aria-valuenow="${L.into}"><i style="--to:${pct}%"></i></div>
     <small class="xp-parts">${parts}</small>
-    ${award.leveledUp ? `<div class="level-up">Level ${L.level}!</div>` : ''}
+    ${award.leveledUp ? (() => { const u = unlocksBetween(award.before.level, L.level).pop(); return u ? `<div class="level-up">Level ${L.level}! · ${u.gameName} ${u.name} unlocked</div><button class="btn small equip" type="button" data-game="${u.game}" data-theme="${u.theme}">Equip ${u.name}</button>` : `<div class="level-up">Level ${L.level}!</div>`; })() : ''}
+    <small class="xp-next">${nextLine(L.level)}</small>
     ${award.firstDaily ? `<div class="daily-done">Today's run done · ${award.streak}-day streak</div>` : ''}`;
+  el.querySelector('.equip')?.addEventListener('click', (e) => { const b = e.currentTarget; equip(b.dataset.game, b.dataset.theme); b.textContent = 'Equipped'; b.disabled = true; });
   return el;
 }
 
